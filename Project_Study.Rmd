@@ -1,0 +1,1174 @@
+---
+title: "Final Project Study"
+author: "Zeynep TUTAR"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      tidy = TRUE, comment = '', out.width="80%")
+```
+
+```{r}
+library(readxl) #for reading excel
+library(lmtest) #for the use of DW test, autocorrelation check
+library(forecast) #for linear reg for time series
+library(DIMORA) #for innovation dif models (GBM, Bass Model etc.)
+library(fpp2) #for datasets
+library(naniar)
+library(GGally)
+library(ggplot2)
+library(corrplot)
+library(tseries)
+library(rcompanion)
+library(dplyr)
+library(tidyr)
+library(splines)
+```
+
+# EDA 
+
+## Monthly Cinema Data
+
+```{r}
+#read the data
+cinema<- read_excel("cinema_monthly.xlsx")
+str(cinema)
+
+cinema.ts <- ts(cinema[,-1], start=c(2006,1), end=c(2023,12), frequency = 12)
+```
+
+Handle Missing Values
+
+```{r}
+# Shows rows with any missing values
+cinema[apply(is.na(cinema), 1, any), ]  
+vis_miss(cinema)
+```
+
+```{r}
+# Define the total annual values for 2013 for each column
+total_2013 <- list(
+  number_of_screenings = 3014642,             
+  audience_admissions = 106124433,         
+  audience_spending = 732299026.82
+)
+
+# Define the columns to impute
+columns_to_impute <- c("number_of_screenings", "audience_admissions", 
+                       "audience_spending", "avg_spending_pp")
+
+# Create a copy of the time series object for imputation
+cinema_imputed <- cinema.ts
+
+# Filter data to include only 2011, 2012, 2014, 2015 for monthly averages
+selected_years <- (time(cinema.ts) >= 2011 & time(cinema.ts) < 2013) |
+                  (time(cinema.ts) >= 2014 & time(cinema.ts) < 2016)
+
+# Loop through each column to impute missing values
+for (col in columns_to_impute) {
+  # Extract the column data
+  column_data <- as.numeric(cinema.ts[, col])
+  
+  if (col == "avg_spending_pp") {
+    # Calculate avg_spending_pp using the imputed audience_spending and audience_admissions
+    imputed_2013 <- cinema_imputed[, "audience_spending"] / 
+      cinema_imputed[, "audience_admissions"]
+    # Replace the missing 2013 data with the calculated values
+    column_data[time(cinema.ts) >= 2013 & time(cinema.ts) < 2014] <- 
+      imputed_2013[time(cinema.ts) >= 2013 & time(cinema.ts) < 2014]
+    
+    # Handle missing values in 2020 and 2021
+    column_data[time(cinema.ts) >= 2020 & time(cinema.ts) < 
+                  2021 & is.na(column_data)] <- 6.35  # Average for 2020
+    column_data[time(cinema.ts) >= 2021 & time(cinema.ts) < 
+                  2022 & is.na(column_data)] <- 6.76  # Average for 2021
+  } 
+  else {
+    # Handle cumulative features using selected years for proportions
+    monthly_proportions <- colMeans(matrix(column_data[selected_years], 
+                                           ncol = 12, byrow = TRUE), na.rm = TRUE)
+    # Normalize to proportions
+    monthly_proportions <- monthly_proportions / sum(monthly_proportions)  
+    imputed_2013 <- monthly_proportions * total_2013[[col]]
+    
+    # Replace the missing 2013 data with the imputed values
+    column_data[time(cinema.ts) >= 2013 & time(cinema.ts) < 2014] <- imputed_2013
+  }
+  
+  # Update the imputed data in the time series
+  cinema_imputed[, col] <- column_data
+}
+
+# Plot the original and imputed data for comparison
+for (col in columns_to_impute) {
+  par(mfrow = c(2, 1), mar = c(4, 4, 2, 1))
+  
+  # Plot the original data
+  plot(cinema.ts[, col], type = "o", pch = 16, lty = 3, cex = 0.4,
+       main = paste("Original", col), xlab = "Time", ylab = col)
+  # Plot the imputed data
+  plot(cinema_imputed[, col], type = "o", pch = 16, lty = 3, cex = 0.4,
+       main = paste("Imputed", col), xlab = "Time", ylab = col)
+  
+  # Optional: Pause between plots
+  #cat("Press [Enter] to see the next feature...\n")
+  #readline()
+}
+
+# Reset plotting layout to default
+par(mfrow = c(1, 1))
+
+```
+
+```{r}
+plot(cinema_imputed, main="Cinema Dataset", cex.lab=0.45, type="o", pch = 16, lty = 3, cex=0.6)
+```
+
+
+
+```{r}
+cinema_admissions <- cinema_imputed[,1]
+cinema_screening <- cinema_imputed[,2]
+cinema_spending <- cinema_imputed[,3]
+avg_cinema_spending_pp <- cinema_imputed[,4]
+cpi_all <- cinema_imputed[,5]
+cpi_culture <- cinema_imputed[,6]
+covid_cases <- cinema_imputed[,7]
+```
+
+
+## Annual OTT Data
+
+```{r}
+ott_annual <- read_excel("ott_cinema_annual.xlsx")
+str(ott_annual)
+
+ott_annual.ts <- ts(ott_annual[,2:3], start=2006, end=2023, frequency = 1)
+```
+
+```{r}
+ott_subscriptions_annual <- ott_annual.ts[,1]
+ott_spending_annual <- ott_annual.ts[,2]
+```
+
+
+Spline Interpolation
+
+
+```{r}
+# Generate a monthly date sequence
+monthly_dates <- seq(as.Date("2006-01-01"), as.Date("2023-12-01"), by = "month")
+
+# Use your extracted dataset
+Year <- time(ott_subscriptions_annual)  # Extract years from the time series object
+ott_subscriptions_annual <- as.numeric(ott_subscriptions_annual)  # Subscriptions data
+ott_spending_annual <- as.numeric(ott_spending_annual)  # Spending data
+
+# Perform spline interpolation for monthly data
+monthly_subscriptions <- spline(
+  x = Year, 
+  y = ott_subscriptions_annual, 
+  xout = seq(2006, 2023, length.out = length(monthly_dates))
+)$y
+
+monthly_spending <- spline(
+  x = Year, 
+  y = ott_spending_annual, 
+  xout = seq(2006, 2023, length.out = length(monthly_dates))
+)$y
+
+# Ensure no negative values after interpolation
+monthly_subscriptions[monthly_subscriptions < 0] <- 0
+monthly_spending[monthly_spending < 0] <- 0
+
+# Create a final data frame for monthly interpolated data
+monthly_data <- data.frame(
+  Month = monthly_dates,
+  ott_subscriptions = monthly_subscriptions,
+  ott_spending = monthly_spending
+)
+
+# Save the interpolated monthly dataset
+write.csv(monthly_data, "interpolated_fixed_monthly_data.csv", row.names = FALSE)
+
+# Print the first 20 rows of the final dataset for verification
+print(head(monthly_data, 100))
+```
+
+
+
+
+```{r}
+ott_subscriptions <- ts(monthly_data$ott_subscriptions, start=2006, end=2023, frequency = 12)
+ott_spending <- ts(monthly_data$ott_spending, start=2006, end=2023, frequency = 12)
+cinema_ott_data <- ts.union(cinema_admissions, cinema_spending, avg_cinema_spending_pp,
+                            cinema_screening, ott_subscriptions, ott_spending, cpi_all,
+                            cpi_culture, covid_cases)
+```
+
+
+```{r}
+plot(cinema_ott_data, type="o", pch = 16, lty = 3, cex.lab=0.6)
+plot(ott_spending, type="o", pch = 16, lty = 3, cex=0.5)
+plot(ott_spending_annual, type="o", pch = 16, lty = 3, cex=0.5)
+pairs(cinema_ott_data)
+```
+
+
+
+```{r}
+plot(monthly_data$Month, monthly_data$ott_subscriptions, type="o", pch = 16, lty = 3, cex=0.5)
+plot(monthly_data$Month, monthly_data$ott_spending, type="o", pch = 16, lty = 3, cex=0.5)
+```
+
+
+```{r}
+#Define cor matrix
+cor_matrix <- cor(as.data.frame(cinema_ott_data)[length])
+# Correlation plot
+corrplot(cor_matrix, method = "color", type = "upper", tl.col = "black",
+         tl.srt = 45, addCoef.col = "black", number.cex = 0.5, tl.cex = 0.5)
+```
+
+```{r}
+# Shows rows with any missing values
+as.data.frame(cinema_ott_data)[apply(is.na(as.data.frame(cinema_ott_data)), 1, any), ]  
+vis_miss(as.data.frame(cinema_ott_data))
+```
+
+
+## Linear Regression Model
+
+
+
+
+```{r}
+tsdisplay(cinema_admissions)
+plot(cinema_admissions, type="o", pch = 16, lty = 3, cex=0.6)
+```
+
+Just trend and season included
+
+```{r}
+# we fit a linear model with trend and seasonality
+lmts_admissions<- tslm(admissions ~ trend + season) 
+
+#plot of the model
+plot(admissions, main="tslm_admissions", type="o", pch = 16, cex=0.4)
+lines(fitted(lmts_admissions), col=2, lwd=2)
+
+summary(lmts_admissions)
+anova(lmts_admissions) #provides info about analysis of variance
+dwtest(lmts_admissions) #indicates a problem of positive autocorrelation
+
+#check the residuals
+checkresiduals(lmts_admissions)
+```
+
+All features included with trend and season
+
+```{r}
+# we fit a linear model with trend and seasonality
+lmts2_admissions<- tslm(admissions ~ trend + season + screening + spending + 
+                          avg_spending_pp + cpi_all + cpi_culture + covid_cases_monthly) 
+
+#plot of the model
+plot(admissions, main="tslm_admissions", type="o", pch = 16, cex=0.4)
+lines(fitted(lmts2_admissions), col=2, lwd=2)
+
+summary(lmts2_admissions)
+anova(lmts2_admissions) #provides info about analysis of variance
+dwtest(lmts2_admissions) #indicates a problem of positive autocorrelation
+
+#check the residuals
+checkresiduals(lmts2_admissions)
+
+```
+
+
+Piecewise feature selection (with trend and season)
+
+```{r}
+# we fit a linear model with trend and seasonality
+lmts3_admissions<- tslm(admissions ~ trend + season + screening + spending + 
+                          avg_spending_pp + cpi_all + covid_cases_monthly) 
+
+#plot of the model
+plot(admissions, main="tslm_admissions", type="o", pch = 16, cex=0.4)
+lines(fitted(lmts3_admissions), col=2, lwd=2)
+
+summary(lmts3_admissions)
+anova(lmts3_admissions) #provides info about analysis of variance
+dwtest(lmts3_admissions) #indicates a problem of positive autocorrelation
+
+#check the residuals
+checkresiduals(lmts3_admissions)
+
+```
+
+
+```{r}
+# we fit a linear model with trend and seasonality
+lmts4_admissions<- tslm(admissions ~ trend + season + screening + spending + 
+                          avg_spending_pp + cpi_all) 
+
+#plot of the model
+plot(admissions, main="tslm_admissions", type="o", pch = 16, cex=0.4)
+lines(fitted(lmts4_admissions), col=2, lwd=2)
+
+summary(lmts4_admissions)
+anova(lmts4_admissions) #provides info about analysis of variance
+dwtest(lmts4_admissions) #indicates a problem of positive autocorrelation
+
+#check the residuals
+checkresiduals(lmts4_admissions)
+
+```
+
+
+
+```{r}
+# we fit a linear model with trend and seasonality
+lmts5_admissions<- tslm(admissions ~ trend + season + spending + 
+                          avg_spending_pp + cpi_all) 
+
+#plot of the model
+plot(admissions, main="tslm_admissions", type="o", pch = 16, cex=0.4)
+lines(fitted(lmts5_admissions), col=2, lwd=2)
+
+summary(lmts5_admissions)
+anova(lmts5_admissions) #provides info about analysis of variance
+dwtest(lmts5_admissions) #indicates a problem of positive autocorrelation
+
+#check the residuals
+checkresiduals(lmts5_admissions)
+
+```
+
+
+
+```{r}
+# we fit a linear model with trend and seasonality
+lmts6_admissions<- tslm(admissions ~ trend + season + spending + 
+                          avg_spending_pp) 
+
+#plot of the model
+plot(admissions, main="tslm_admissions", type="o", pch = 16, cex=0.4)
+lines(fitted(lmts6_admissions), col=2, lwd=2)
+
+summary(lmts6_admissions)
+anova(lmts6_admissions) #provides info about analysis of variance
+dwtest(lmts6_admissions) #indicates a problem of positive autocorrelation
+
+#check the residuals
+checkresiduals(lmts6_admissions)
+
+```
+
+
+
+```{r}
+# we fit a linear model with trend and seasonality
+lmts7_admissions<- tslm(admissions ~ trend + season + spending + cpi_all) 
+
+#plot of the model
+plot(admissions, main="tslm_admissions", type="o", pch = 16, cex=0.4)
+lines(fitted(lmts7_admissions), col=2, lwd=2)
+
+summary(lmts7_admissions)
+anova(lmts7_admissions) #provides info about analysis of variance
+dwtest(lmts7_admissions) #indicates a problem of positive autocorrelation
+
+#check the residuals
+checkresiduals(lmts7_admissions)
+
+```
+
+
+
+```{r}
+# we fit a linear model with trend and seasonality
+lmts8_admissions<- tslm(admissions ~ trend + season + screening + spending 
+                        + cpi_all) 
+
+#plot of the model
+plot(admissions, main="tslm_admissions", type="o", pch = 16, cex=0.4)
+lines(fitted(lmts8_admissions), col=2, lwd=2)
+
+summary(lmts8_admissions)
+anova(lmts8_admissions) #provides info about analysis of variance
+dwtest(lmts8_admissions) #indicates a problem of positive autocorrelation
+
+#check the residuals
+checkresiduals(lmts8_admissions)
+
+```
+
+
+
+```{r}
+compareLM(lmts_admissions, lmts2_admissions, lmts3_admissions, lmts4_admissions,
+          lmts5_admissions, lmts6_admissions, lmts7_admissions, lmts8_admissions)
+```
+
+
+
+```{r}
+pairwiseModelAnova(lmts_admissions, lmts2_admissions, lmts3_admissions, 
+                   lmts4_admissions, lmts5_admissions, lmts6_admissions, 
+                   lmts7_admissions, lmts8_admissions)
+```
+
+
+Forecasting
+: this part doesnt work because i need future values of other predictor (screening, spending etc.). For that, I can use ARIMA.
+Also the residuals are not WN so still forecast anyway? but i did forecasting with diff models anyway so why not? TODO
+
+```{r}
+forcast_admissions <- forecast(lmts_admissions, h=24)
+forcast_admissions
+plot(forcast_admissions)
+lines(fitted(lmts4_admissions), col=2, lwd=2)
+```
+
+## Bass Model (BM)
+
+
+```{r}
+# Fit the Bass Model
+BM.cinema_admissions <- BM(cinema_admissions)
+summary(BM.cinema_admissions)
+
+checkresiduals(BM.cinema_admissions)
+plot.Dimora(BM.cinema_admissions)
+```
+Future Prediction
+
+```{r}
+# Generate time index for observed data (2006 to 2023, monthly)
+observed_months <- seq(as.Date("2006-01-01"), as.Date("2023-12-01"), by = "month")
+# Generate time index for predictions (2006 to 2033, monthly)
+predicted_months <- seq(as.Date("2006-01-01"), as.Date("2033-12-01"), by = "month")
+```
+
+
+```{r}
+# Predict 10 years into the future
+pred_BM.cinema_admissions<- predict(BM.cinema_admissions, newx = 1:336) 
+inst_pred_BM.cinema_admissions<- make.instantaneous(pred_BM.cinema_admissions)
+
+par(mfrow = c(1, 2))
+# Plot observed cumulative cinema_admissions
+plot(observed_months, cumsum(cinema_admissions), type = "o", pch = 16, lty = 3, 
+     cex = 0.6, xlab = "Time", ylab = "Cumulative Cinema Admissions",
+     xlim = range(c(observed_months, predicted_months)), 
+     ylim = c(0, max(cumsum(cinema_admissions), pred_BM.cinema_admissions)))
+# Overlay predicted cumulative cinema_admissions
+lines(predicted_months, pred_BM.cinema_admissions, lwd = 2, col = 2)
+legend("bottomright", c("Observed", "Predicted"), col = c(1, 2),
+       lty = c(3, 1), lwd = c(1, 2), pch = c(16, NA), merge = TRUE, cex=0.8)
+
+
+# Plot observed monthly cinema_admissions
+plot(observed_months, cinema_admissions, type = "o", pch = 16, lty = 3, 
+     cex = 0.6, xlab = "Time", ylab = "Monthly Cinema Admissions",
+     xlim = range(c(observed_months, predicted_months)), 
+     ylim = c(0, max(cinema_admissions, inst_pred_BM.cinema_admissions)))
+# Overlay predicted instantaneous cinema_admissions
+lines(predicted_months, inst_pred_BM.cinema_admissions, lwd = 3, col = 2)
+legend("topright", c("Observed", "Predicted"), col = c(1, 2),
+       lty = c(3, 1), lwd = c(1, 3), pch = c(16, NA), merge = TRUE, cex=0.8)
+
+par(mfrow = c(1, 1))
+```
+
+
+## GBM
+
+```{r}
+# GBM exponential shock
+GBM.cinema_admissions<- GBM(cinema_admissions,shock = "exp",nshock = 1,
+                                 prelimestimates = c(1.963349e+09, 4.244444e-03, 
+                                                     9.822524e-03, 170,-0.1,-1)) 
+# m,p,q, a(starting point), b(memory of the shock), c(intensity) 
+summary(GBM.cinema_admissions)
+
+checkresiduals(GBM.cinema_admissions)
+plot.Dimora(GBM.cinema_admissions)
+```
+
+```{r}
+res_GBM <- residuals(GBM.cinema_admissions)
+dwtest(res_GBM)
+```
+
+
+Future Prediction
+
+```{r}
+# Predict 10 years into the future
+pred_GBM.cinema_admissions<- predict(GBM.cinema_admissions, newx = 1:336) 
+inst_pred_GBM.cinema_admissions<- make.instantaneous(pred_GBM.cinema_admissions)
+
+par(mfrow = c(1, 2))
+# Plot observed cumulative cinema_admissions
+plot(observed_months, cumsum(cinema_admissions), type = "o", pch = 16, lty = 3, 
+     cex = 0.6, xlab = "Time", ylab = "Cumulative cinema_admissions",
+     xlim = range(c(observed_months, predicted_months)), 
+     ylim = c(0, max(cumsum(cinema_admissions), pred_GBM.cinema_admissions)))
+# Overlay predicted cumulative cinema_admissions
+lines(predicted_months, pred_GBM.cinema_admissions, lwd = 2, col = 3)
+legend("bottomright", c("Observed", "Predicted"), col = c(1, 3),
+       lty = c(3, 1), lwd = c(1, 2), pch = c(16, NA), merge = TRUE, cex=0.8)
+
+
+# Plot observed monthly cinema_admissions
+plot(observed_months, cinema_admissions, type = "o", pch = 16, lty = 3, 
+     cex = 0.6, xlab = "Time", ylab = "Monthly cinema_admissions",
+     xlim = range(c(observed_months, predicted_months)), 
+     ylim = c(0, max(cinema_admissions, inst_pred_GBM.cinema_admissions)))
+# Overlay predicted instantaneous cinema_admissions
+lines(predicted_months, inst_pred_GBM.cinema_admissions, lwd = 3, col = 3)
+legend("topright", c("Observed", "Predicted"), col = c(1, 3),
+       lty = c(3, 1), lwd = c(1, 3), pch = c(16, NA), merge = TRUE, cex=0.8)
+
+par(mfrow = c(1, 1))
+```
+## GGM
+
+```{r}
+GGM.cinema_admissions<- GGM(cinema_admissions, prelimestimates=c(3.496741e+09, 0.001, 0.01, 
+                                                  2.693658e-03, 2.973322e-03))
+summary(GGM.cinema_admissions)
+
+checkresiduals(GGM.cinema_admissions)
+plot.Dimora(GGM.cinema_admissions)
+```
+
+Future Prediction
+
+```{r}
+# Predict 10 years into the future
+pred_GGM.cinema_admissions<- predict(GGM.cinema_admissions, newx = 1:336) 
+inst_pred_GGM.cinema_admissions<- make.instantaneous(pred_GGM.cinema_admissions)
+
+par(mfrow = c(1, 2))
+# Plot observed cumulative cinema_admissions
+plot(observed_months, cumsum(cinema_admissions), type = "o", pch = 16, lty = 3, 
+     cex = 0.6, xlab = "Time", ylab = "Cumulative cinema_admissions",
+     xlim = range(c(observed_months, predicted_months)), 
+     ylim = c(0, max(cumsum(cinema_admissions), pred_GGM.cinema_admissions)))
+# Overlay predicted cumulative cinema_admissions
+lines(predicted_months, pred_GGM.cinema_admissions, lwd = 2, col = "deepskyblue1")
+legend("bottomright", c("Observed", "Predicted"), col = c(1, "deepskyblue1"),
+       lty = c(3, 1), lwd = c(1, 2), pch = c(16, NA), merge = TRUE, cex=0.8)
+
+
+# Plot observed monthly cinema_admissions
+plot(observed_months, cinema_admissions, type = "o", pch = 16, lty = 3, 
+     cex = 0.6, xlab = "Time", ylab = "Monthly cinema_admissions",
+     xlim = range(c(observed_months, predicted_months)), 
+     ylim = c(0, max(cinema_admissions, inst_pred_GGM.cinema_admissions)))
+# Overlay predicted instantaneous cinema_admissions
+lines(predicted_months, inst_pred_GGM.cinema_admissions, lwd = 3, col = "deepskyblue1")
+legend("topright", c("Observed", "Predicted"), col = c(1, "deepskyblue1"),
+       lty = c(3, 1), lwd = c(1, 3), pch = c(16, NA), merge = TRUE, cex=0.8)
+
+par(mfrow = c(1, 1))
+```
+
+```{r}
+# Plot observed monthly cinema_admissions
+plot(observed_months, cinema_admissions, type = "o", pch = 16, lty = 3, 
+     cex = 0.6, xlab = "Time", ylab = "Monthly Cinema Admissions",
+     xlim = range(c(observed_months, predicted_months)), 
+     ylim = c(0, max(cinema_admissions, inst_pred_GGM.cinema_admissions)))
+
+# Overlay predicted instantaneous cinema_admissions
+lines(predicted_months, inst_pred_BM.cinema_admissions, lwd = 3, col = 2) 
+lines(predicted_months, inst_pred_GBM.cinema_admissions, lwd = 3, col = 3)
+lines(predicted_months, inst_pred_GGM.cinema_admissions, lwd = 3, col = "deepskyblue1")
+legend("topright", c("BM", "GBM", "GGM"), col = c(2, 3, "deepskyblue1"),
+       lty = c(1, 1, 1), lwd = c(3, 3, 3), merge = TRUE, cex=0.8)
+```
+## ARIMA
+
+```{r}
+tsdisplay(cinema_admissions)
+```
+
+General indication (for differenced data): 
+- If the ACF is exponentially decaying or sinusoidal and there is a significant spike at lag p in PACF and nothing else, it may be an ARIMA(p,d,0). 
+- If the PACF is exponentially decaying or sinusoidal and there is a significant spike at lag p in ACF and nothing else, it may be an ARIMA(0,d,q). 
+
+
+```{r}
+diff1<- diff(cinema_admissions)
+tsdisplay(diff1, main = "cinema_admissions (d=1)")
+```
+
+```{r}
+diff12<- diff(diff1, lag=12) 
+tsdisplay(diff12, main = "cinema_admissions (d=1, D=1, s=12)")
+```
+
+
+```{r}
+# first Arima model 
+arima1.cinema_admissions<- Arima(cinema_admissions, order=c(2,1,2), seasonal=c(1,1,1))
+summary(arima1.cinema_admissions)
+fit.arima1.cinema_admissions<- fitted(arima1.cinema_admissions)
+
+plot(cinema_admissions, type="o", pch = 16, cex=0.6)
+lines(fit.arima1.cinema_admissions, col="green", lwd=2)
+
+
+forecast.arima1.cinema_admissions<- forecast(arima1.cinema_admissions)
+plot(forecast.arima1.cinema_admissions)
+
+res.arima1.cinema_admissions<- residuals(arima1.cinema_admissions)
+tsdisplay(res.arima1.cinema_admissions)
+
+checkresiduals(arima1.cinema_admissions)
+```
+
+```{r}
+# second Arima model 
+arima2.cinema_admissions<- Arima(cinema_admissions, order=c(9,1,2), seasonal=c(1,1,1))
+summary(arima2.cinema_admissions)
+fit.arima2.cinema_admissions<- fitted(arima2.cinema_admissions)
+
+plot(cinema_admissions, type="o", pch = 16, cex=0.6)
+lines(fit.arima2.cinema_admissions, col="blue", lwd=2)
+
+forecast.arima2.cinema_admissions<- forecast(arima2.cinema_admissions)
+plot(forecast.arima2.cinema_admissions)
+
+res.arima2.cinema_admissions<- residuals(arima2.cinema_admissions)
+tsdisplay(res.arima2.cinema_admissions)
+
+checkresiduals(arima2.cinema_admissions)
+
+```
+
+```{r}
+# Auto ARIMA
+auto.arima.cinema_admissions<- auto.arima(cinema_admissions)
+summary(auto.arima.cinema_admissions)
+fit.auto.arima.cinema_admissions<- fitted(auto.arima.cinema_admissions)
+
+plot(cinema_admissions, type="o", pch = 16, cex=0.6)
+lines(fit.auto.arima.cinema_admissions, col="red", lwd=2)
+
+forecast.auto.arima.cinema_admissions<- forecast(auto.arima.cinema_admissions)
+autoplot(forecast.auto.arima.cinema_admissions)
+
+res.auto.arima.cinema_admissions<- residuals(auto.arima.cinema_admissions)
+tsdisplay(res.auto.arima.cinema_admissions)
+
+checkresiduals(auto.arima.cinema_admissions)
+```
+
+```{r}
+AIC(arima1.cinema_admissions, arima2.cinema_admissions, auto.arima.cinema_admissions)
+```
+
+TODO: mix modeller yap, tek başına arima yeterisz, covid patlamasını göremiyor
+
+## Exponential Smoothing
+
+### 1) Simple exponential smoothing
+
+```{r}
+SES1.cinema_admissions<- ses(cinema_admissions, alpha=0.2, initial="simple", h=120)
+# alpha: # Value of smoothing parameter for the level. 
+# h: Number of periods for forecasting.
+
+# Replace negative lower bounds with zero
+SES1.cinema_admissions$lower[SES1.cinema_admissions$lower < 0] <- 0
+summary(SES1.cinema_admissions)
+accuracy(SES1.cinema_admissions)
+```
+
+
+```{r}
+SES2.cinema_admissions<- ses(cinema_admissions, alpha=0.6, initial="simple", h=120)
+# Replace negative lower bounds with zero
+SES2.cinema_admissions$lower[SES1.cinema_admissions$lower < 0] <- 0
+summary(SES2.cinema_admissions)
+```
+
+
+
+```{r}
+SES3.cinema_admissions<- ses(cinema_admissions, alpha=0.9, h=120)
+# Replace negative lower bounds with zero
+SES3.cinema_admissions$lower[SES3.cinema_admissions$lower < 0] <- 0
+summary(SES3.cinema_admissions)
+```
+
+
+```{r}
+par(mfrow=c(3,1), pin=c(5,1))
+plot(cinema_admissions, ylab="cinema_admissions\n(alpha=0.2)", type="o", pch = 16, cex=0.6)
+lines(fitted(SES1.cinema_admissions), col="green", lwd=2)
+
+plot(cinema_admissions, ylab="cinema_admissions\n(alpha=0.6)", type="o", pch = 16, cex=0.6)
+lines(fitted(SES2.cinema_admissions), col="blue", lwd=2)
+
+plot(cinema_admissions, ylab="cinema_admissions\n(alpha=0.9)", type="o", pch = 16, cex=0.6)
+lines(fitted(SES3.cinema_admissions), col="red", lwd=2)
+
+par(mfrow=c(1,1))
+
+```
+
+```{r}
+SES1.cinema_admissions$model$aic
+SES2.cinema_admissions$model$aic
+SES3.cinema_admissions$model$aic
+```
+
+
+```{r}
+autoplot(cinema_admissions)+
+  autolayer(SES3.cinema_admissions, series="alpha=0.9", PI=T)+
+  autolayer(SES1.cinema_admissions, series="alpha=0.2", PI=F)+
+  autolayer(SES2.cinema_admissions, series="alpha=0.6", PI=F)+
+  ylab("Cinema Admissions")+xlab("Year")
+```
+
+### 2) Holt's method (for Trend)
+
+```{r}
+
+holt1.cinema_admissions<- holt(cinema_admissions, h=120)
+holt2.cinema_admissions<- holt(cinema_admissions, damped=T, h=120)
+# Replace negative lower bounds with zero
+holt1.cinema_admissions$lower[holt1.cinema_admissions$lower < 0] <- 0
+holt2.cinema_admissions$lower[holt2.cinema_admissions$lower < 0] <- 0
+
+summary(holt1.cinema_admissions)
+summary(holt2.cinema_admissions)
+
+autoplot(cinema_admissions)+
+  autolayer(holt1.cinema_admissions, series="Holt's method", PI=F)+
+  autolayer(holt2.cinema_admissions, series="Damped Holt's method", PI=F)
+
+```
+
+### 3) Holt-Winters method (for Trend and Seasonality)
+
+```{r}
+hw.cinema_admissions<- hw(cinema_admissions, seasonal="additive")
+# Replace negative lower bounds with zero
+hw.cinema_admissions$lower[hw.cinema_admissions$lower < 0] <- 0
+
+summary(hw.cinema_admissions)
+
+autoplot(hw.cinema_admissions)+
+  autolayer(fitted(hw.cinema_admissions), series="Holt-Winters' additive")+
+  ylab("Cinema Admissions")+xlab("Year")
+```
+
+```{r}
+SES3.cinema_admissions$model$aicc
+holt1.cinema_admissions$model$aicc
+holt2.cinema_admissions$model$aicc
+hw.cinema_admissions$model$aicc
+```
+
+
+# Annual OTT and Cinema Data
+
+
+## EDA 
+
+
+```{r}
+plot(ott_cinema_annual.ts, type="o", pch = 16, lty = 3, cex.lab=0.5)
+```
+
+Handle Missing Values
+
+```{r}
+# Shows rows with any missing values
+ott_cinema_annual[apply(is.na(ott_cinema_annual), 1, any), ]  
+```
+
+```{r}
+SES.households_internet <- holt(households_internet, damped=T, h=1)
+
+summary(SES.households_internet)
+
+autoplot(SES.households_internet)+
+  autolayer(fitted(SES.households_internet), series="Damped Holt's method")+
+  ylab("Households with Internet (%)")+xlab("Year")
+```
+
+```{r}
+households_internet <- c(households_internet[-length(households_internet)], 
+                         SES.households_internet$mean)
+
+ott_cinema_annual.ts[, "households_w_internet"] <- households_internet
+
+ott_cinema_annual$households_w_internet[is.na(ott_cinema_annual$households_w_internet)] <- SES.households_internet$mean
+```
+
+
+
+```{r}
+col = colnames(ott_cinema_annual.ts)
+ott_cinema_annual[,col[-1]] %>%
+  GGally::ggpairs()
+```
+
+
+
+```{r}
+#Define cor matrix
+ott_cinema_annual_cormatrix <- cor(ott_cinema_annual[,-1])
+# Correlation plot
+corrplot(ott_cinema_annual_cormatrix, method = "color", type = "upper", tl.col = "black",
+         tl.srt = 45, addCoef.col = "black", number.cex = 0.5, tl.cex = 0.5)
+```
+
+## Diffiusion Models for OTT Subscriptions and Cinema Admissions
+
+Perform a competition study between OTT and Cinema
+
+```{r}
+# Apply Min-Max Normalization
+normalize_minmax <- function(x) {
+  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+}
+ott_subscriptions.norm <- normalize_minmax(ott_subscriptions)
+cinema_admissions.norm <- normalize_minmax(cinema_admissions)
+```
+
+
+```{r}
+# Plot the normalized time series
+plot(cinema_admissions.norm, type = "o", pch = 16, lty = 3, col = "blue", 
+     xlab = "Year", ylab = "Normalized Values",
+     main = "Normalized OTT Subscriptions and Cinema Admissions", ylim = c(0, 1))
+points(ott_subscriptions.norm, type = "o", pch = 16, lty = 3, col = "red")
+legend("left", legend = c("Cinema Admissions", "OTT Subscriptions"), 
+       col = c("blue", "red"), lty = 3, pch = 16, cex=0.7)
+```
+
+Estimating initial parameters with Bass Model:
+
+```{r}
+# Cinema Admissions
+BM.cinema_admissions<-BM(cinema_admissions, display = T)
+m.c = BM.cinema_admissions$Estimate[1, 1]     # Market potential for Cinema
+p.c = BM.cinema_admissions$Estimate[2, 1]    # Innovation coefficient for Cinema
+q.c = BM.cinema_admissions$Estimate[3, 1]    # Imitation coefficient for Cinema
+summary(BM.cinema_admissions)
+checkresiduals(BM.cinema_admissions)
+
+# OTT Subscriptions
+BM.ott_subscriptions<-BM(ott_subscriptions, display = T)
+m.o = BM.ott_subscriptions$Estimate[1, 1]     # Market potential for OTT
+p.o = BM.ott_subscriptions$Estimate[2, 1] # Innovation coefficient for OTT
+q.o = BM.ott_subscriptions$Estimate[3, 1]  # Imitation coefficient for OTT
+summary(BM.ott_subscriptions)
+checkresiduals(BM.ott_subscriptions)
+```
+
+GBM for cinema admissions:
+```{r}
+# Cinema Admissions
+# GBM exponential shock
+
+# Define the time period when the COVID-19 shock begins
+covid_start <- 2020 - 2006 + 1
+
+# m,p,q, a(starting point), b(memory of the shock), c(intensity)
+GBM.cinema_admissions<- GBM(cinema_admissions, shock = "exp", nshock = 1,
+                     prelimestimates = c(m.c, p.c, q.c, covid_start, -0.5, -0.1)) 
+
+summary(GBM.cinema_admissions)
+checkresiduals(GBM.cinema_admissions)
+
+m.c = BM.cinema_admissions$Estimate[1, 1]    # Market potential for Cinema
+p.c = BM.cinema_admissions$Estimate[2, 1]    # Innovation coefficient for Cinema
+q.c = BM.cinema_admissions$Estimate[3, 1]    # Imitation coefficient for Cinema
+```
+GGM for OTT subscriptions:
+
+```{r}
+GGM.ott_subscriptions<- GGM(ott_subscriptions, 
+                            prelimestimates=c(m.o, 0.01, 0.01, p.o, q.o), oos=10)
+summary(GGM.ott_subscriptions)
+checkresiduals(GGM.ott_subscriptions)
+```
+
+
+
+```{r}
+###estimate the UCRCD (with delta and gamma)
+UCRCD.adm.subs<- UCRCD(
+  series1 = cinema_admissions,  # Instantaneous cinema admissions
+  series2 = ott_subscriptions,  # Instantaneous OTT subscriptions
+  m1 = m.c,                    # Market potential for cinema (GBM result)
+  p1c = p.c,                   # Innovation coefficient for cinema
+  q1c = q.c,                   # Imitation coefficient for cinema
+  m2 = m.o,                    # Market potential for OTT (BM result)
+  p2 = p.o,                   # Innovation coefficient for OTT
+  q2 = q.o                    # Imitation coefficient for OTT
+)
+summary(UCRCD.adm.subs)
+```
+
+
+```{r}
+#Expenses
+plot(cinema_audience_spending,xlab="year", ylab="Expenses", type= "o", 
+     pch=16, lty=3, cex=0.7, ylim=c(0, max(cinema_audience_spending, ott_spending)))
+points(ott_spending, type= "o", pch=16, lty=3, cex=0.7, col=2)
+```
+#TODO: scaling ile subs ve adm karşılaştırabilirsin. https://rdrr.io/github/federicozanghi/DIMORA/man/UCRCD.html bu linkteki methodla GBM shockunu verebilirsin. bunun için de önde dataları BM, GBM ve GGM ile dene.
+
+```{r}
+###estimate the UCRCD (with delta and gamma)
+UCRCD.oc.exp<- UCRCD(cinema_audience_spending, ott_spending, display=T)
+summary(UCRCD.oc.exp)
+```
+
+
+```{r}
+##we make a plot of the UCRCD model 
+plot(cinema_audience_spending,xlab="year", ylab="Expenses", type= "o", 
+     pch=16, lty=3, cex=0.7, ylim=c(0, max(cinema_audience_spending, ott_spending)))
+points(ott_spending, type= "o", pch=16, lty=3, cex=0.7, col=2)
+
+observed_years <- seq(2006, 2023, by = 1)
+lines(observed_years, (UCRCD.oc.exp$fitted.i[[1]]), lwd=2, col=1)
+lines(observed_years, (UCRCD.oc.exp$fitted.i[[2]]), lwd=2, col=2)
+
+###we also add a line and some text within the plot
+abline(v=2020, lty=2)
+text(2020, 0.8, pos=3, "Covid-19 Pandemic")
+```
+
+
+
+
+
+
+```{r}
+#we estimate a simple Bass Model 
+BM.ott_subscriptions <- BM(ott_subscriptions, display = T)
+summary(BM.ott_subscriptions)
+
+#we are not sure if this is the maximum peak since we are still in the increasing 
+#part of the process. So, simple Bass Model is probably not enough. But still, 
+#start with Bass Model as a starting point and then move on to more complex models
+#Looks like Bass Model cannot capture the data well. 
+#while there is still an increase in the data, the model predicts a decrease.
+```
+
+
+```{r}
+Acf(ott_subscriptions)
+Acf(ott_spending)
+Acf(cinema_admissions)
+Acf(cinema_audience_spending)
+```
+
+
+```{r}
+# Predict 80 years into the future
+pred.ott_subs <- predict(BM.ott_subs, newx = 1:98) # Extend 80 years beyond 18 years of data
+instant.ott_subs <- make.instantaneous(pred.ott_subs)
+
+# Generate time index for observed data (2006 to 2023)
+observed_years <- seq(2006, 2023, by = 1)
+# Generate time index for predictions (2006 to 2103)
+pred_years <- seq(2006, 2006 + 97, by = 1)
+
+# Plot observed cumulative subscriptions
+plot(observed_years, cumsum(ott_subs), type = "o", xlab = "Year", ylab = "Cumulative subs",
+     pch = 16, lty = 3, cex = 0.6, xlim = c(2006, 2103), ylim = c(0, 1000))
+# Overlay the predicted cumulative subscriptions
+lines(pred_years, pred.ott_subs, lwd = 2, col = 2)
+
+# Plot annual subscriptions
+plot(observed_years, ott_subs, type = "o", xlab = "Year", ylab = "Annual Subs",
+     pch = 16, lty = 3, cex = 0.6, xlim = c(2006, 2103), ylim = c(0, max(ott_subs, instant.ott_subs)))
+
+# Overlay the predicted instantaneous subscriptions
+lines(pred_years, instant.ott_subs, lwd = 2, col = 2)
+
+
+res.fit.ott_subs<- residuals(BM.ott_subs)
+plot(res.fit.ott_subs, type = "o", xlab = "Year", ylab = "Annual Subs",
+     pch = 16, lty = 3, cex = 0.6)
+Acf(res.fit.ott_subs)
+
+res.fit.ott_exp<- residuals(BM.ott_exp)
+plot(res.fit.ott_exp, type = "o", xlab = "Year", ylab = "Annual Subs",
+     pch = 16, lty = 3, cex = 0.6)
+Acf(res.fit.ott_exp)
+
+#----------------------------------------------------------------
+
+BM.cinema_adm<-BM(cinema_adm,display = T)
+summary(BM.cinema_adm)
+BM.cinema_exp<-BM(cinema_exp,display = T)
+summary(BM.cinema_exp)
+
+
+#------------------------------------------------------
+# OTT GBM
+
+# Fit the Bass Model
+BM.ott_exp <- BM(ott_exp)
+summary(BM.ott_exp) 
+res.BM.ott_exp<- residuals(BM.ott_exp)
+plot(res.BM.ott_exp, type = "o", pch = 16, lty = 3, cex = 0.6)
+Acf(res.BM.ott_exp)
+
+# GBM exponential shock
+GBM.ott_exp<- GBM(ott_exp,shock = "rett",nshock = 1,
+                     prelimestimates = c(8.894847e+04, 4.134324e-05, 5.540857e-01, 15, 17, -1)) 
+# m,p,q, a(starting point), b(memory of the shock), c(intensity)
+summary(GBM.ott_exp)
+
+res.GBM.ott_exp<- residuals(GBM.ott_exp)
+plot(res.GBM.ott_exp, type = "o", pch = 16, lty = 3, cex = 0.6)
+Acf(res.GBM.ott_exp)
+
+#when the peak is sooo far away, we have a situation that we havent reached the 
+#peak point yet. So the market potential is not reliable at this point. So we 
+#can rely on the model for a short period of estimations.
+
+# Predict 50 years into the future
+pred_GBM.ott_exp<- predict(GBM.ott_exp, newx = 1:48) # Extend 50 years beyond 18 years of data
+pred_GBM.ott_exp_inst<- make.instantaneous(pred_GBM.ott_exp)
+
+# Generate time index for observed data 
+observed_years <- seq(2006, 2023, by = 1)
+# Generate time index for predictions 
+pred_years <- seq(2006, 2006 + 47, by = 1)
+
+# Plot observed cumulative subscriptions
+plot(observed_years, cumsum(ott_exp), type = "o", xlab = "Year", ylab = "Cumulative subs",
+     pch = 16, lty = 3, cex = 0.6, xlim = c(2006, 2006 + 47), ylim = c(0, max(cumsum(ott_exp), pred_GBM.ott_exp)))
+# Overlay the predicted cumulative subscriptions
+lines(pred_years, pred_GBM.ott_exp, lwd = 2, col = 2)
+
+# Plot annual subscriptions
+plot(observed_years, ott_exp, type = "o", xlab = "Year", ylab = "Annual Subs",
+     pch = 16, lty = 3, cex = 0.6, xlim = c(2006, 2006 + 47), ylim = c(0, max(ott_exp, pred_GBM.ott_exp_inst)))
+
+# Overlay the predicted instantaneous subscriptions
+lines(pred_years, pred_GBM.ott_exp_inst, lwd = 2, col = 2)
+
+#------------------------------------------------------
+# Cinema GBM
+
+# Fit the Bass Model
+BM.cinema_adm <- BM(cinema_adm)
+summary(BM.cinema_adm) 
+
+# GBM exponential shock
+GBM.cinema_adm<- GBM(cinema_adm, shock = "exp",nshock = 1,
+                     prelimestimates = c(1.979387e+03, 5.055723e-02, 1.157916e-01, 15,-0.1,-1)) 
+# m,p,q, a(starting point), b(memory of the shock), c(intensity)
+summary(GBM.cinema_adm)
+
+res.GBM.cinema_adm <- residuals(GBM.cinema_adm)
+plot(res.GBM.cinema_adm, type = "o", pch = 16, lty = 3, cex = 0.6)
+Acf(res.GBM.cinema_adm)
+
+# Predict 50 years into the future
+pred_GBM.cinema_adm<- predict(GBM.cinema_adm, newx = 1:68) # Extend 50 years beyond 18 years of data
+inst_pred_GBM.cinema_adm<- make.instantaneous(pred_GBM.cinema_adm)
+
+# Generate time index for observed data 
+observed_years <- seq(2006, 2023, by = 1)
+# Generate time index for predictions
+pred_years <- seq(2006, 2006 + 67, by = 1)
+
+# Plot observed cumulative subscriptions
+plot(observed_years, cumsum(cinema_adm), type = "o", xlab = "Year", ylab = "Cumulative adm",
+     pch = 16, lty = 3, cex = 0.6, xlim = c(2006, 2006 + 67), ylim = c(0, max(cumsum(cinema_adm), pred_GBM.cinema_adm)))
+# Overlay the predicted cumulative subscriptions
+lines(pred_years, pred_GBM.cinema_adm, lwd = 2, col = 2)
+
+# Plot annual subscriptions
+plot(observed_years, cinema_adm, type = "o", xlab = "Year", ylab = "Annual adm",
+     pch = 16, lty = 3, cex = 0.6, xlim = c(2006, 2006 + 67), ylim = c(0, max(cinema_adm, inst_pred_GBM.cinema_adm)))
+
+# Overlay the predicted instantaneous subscriptions
+lines(pred_years, inst_pred_GBM.cinema_adm, lwd = 2, col = 2)
+
+
+
+
+#-----------------------------------------------------------------------------
+#Cinema(annually) GGM
+
+BM.cinema_adm <- BM(cinema_adm)
+summary(BM.cinema_adm) 
+GBM.cinema_adm<- GBM(cinema_adm, shock = "exp",nshock = 1,
+                     prelimestimates = c(1.979387e+03, 5.055723e-02, 1.157916e-01, 15,-0.1,-1)) 
+summary(GBM.cinema_adm)
+
+GGM.cinema_adm<- GGM(cinema_adm, prelimestimates=c(3769.43430149, 0.001, 0.01, 0.03001907, 0.03134832))
+summary(GGM.cinema_adm)
+
+res.GGM.cinema_adm <- residuals(GGM.cinema_adm)
+plot(res.GGM.cinema_adm, type = "o", pch = 16, lty = 3, cex = 0.6)
+Acf(res.GGM.cinema_adm)
+
+#------------------------------------------------------
+# OTT GGM
+
+BM.ott_exp <- BM(ott_exp)
+summary(BM.ott_exp) 
+GBM.ott_exp<- GBM(ott_exp,shock = "rett",nshock = 1,
+      prelimestimates = c(8.894847e+04, 4.134324e-05, 5.540857e-01, 15, 17, -1)) 
+summary(GBM.ott_exp)
+
+GGM.ott_exp<- GGM(ott_exp, prelimestimates=c(1.059095e+04, 0.001, 0.01, 3.870570e-05, 5.421316e-01))
+summary(GGM.ott_exp)
+
+res.GGM.ott_exp<- residuals(GBM.ott_exp)
+plot(res.GGM.ott_exp, type = "o", pch = 16, lty = 3, cex = 0.6)
+Acf(res.GGM.ott_exp)
+
+# Predict 50 years into the future
+pred_GGM.ott_exp<- predict(GGM.ott_exp, newx = 1:48) # Extend 50 years beyond 18 years of data
+pred_GGM.ott_exp_inst<- make.instantaneous(pred_GGM.ott_exp)
+
+# Generate time index for observed data 
+observed_years <- seq(2006, 2023, by = 1)
+# Generate time index for predictions 
+pred_years <- seq(2006, 2006 + 47, by = 1)
+
+# Plot observed cumulative subscriptions
+plot(observed_years, cumsum(ott_exp), type = "o", xlab = "Year", ylab = "Cumulative subs",
+     pch = 16, lty = 3, cex = 0.6, xlim = c(2006, 2006 + 47), ylim = c(0, max(cumsum(ott_exp), pred_GGM.ott_exp)))
+# Overlay the predicted cumulative subscriptions
+lines(pred_years, pred_GGM.ott_exp, lwd = 2, col = 2)
+
+# Plot annual subscriptions
+plot(observed_years, ott_exp, type = "o", xlab = "Year", ylab = "Annual Subs",
+     pch = 16, lty = 3, cex = 0.6, xlim = c(2006, 2006 + 47), ylim = c(0, max(ott_exp, pred_GGM.ott_exp_inst)))
+
+# Overlay the predicted instantaneous subscriptions
+lines(pred_years, pred_GGM.ott_exp_inst, lwd = 2, col = 2)
+lines(pred_years, pred_GBM.ott_exp_inst, lwd = 2, col = 3)
+
+#------------------------------------------------------
+
+
+#-----------------------------------------------------------------------------
+
+```
+
