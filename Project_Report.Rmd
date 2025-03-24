@@ -1,0 +1,108 @@
+---
+title: "Business, Economic and Financial Data Final Project" 
+subtitle: "A Time Series Analysis of Cinema Admissions in Italy"
+author: "Zeynep TUTAR - 2106038"
+bibliography: "Bibliography.bib"
+toc: true
+toc-own-page: true
+df_print: kable
+fontsize: 10pt
+lang: en-GB
+titlepage: true
+titlepage-background: "img/unipdbg.pdf"
+header-center: "\\leftmark"
+header-right: "BEFD Final Project"
+footer-left: "\\hspace{1cm}"
+footer-center: "Page \\thepage"
+footer-right: "\\hspace{1cm}"
+natbib: true
+hyperrefoptions:
+  - linktoc=all
+#biblio-style: apsr
+colorlinks: true
+
+editor_options: 
+  markdown: 
+    wrap: 72
+    
+
+header-includes:
+   - \usepackage{setspace}
+   - \newpage
+   - \usepackage{hyperref}
+   - \usepackage{multirow}
+   - \usepackage{amsmath}
+   - \usepackage{algorithm}
+   - \usepackage{algorithmic}
+   - \usepackage{authblk}
+   - \usepackage{graphicx}
+   - 
+#   - \usepackage{fancyvrb}
+#   - \RecustomVerbatimEnvironment{Verbatim}{BVerbatim}{breaklines=true,breakanywhere=true}
+
+
+
+output:
+  pdf_document:
+    template: "template/eisvogel.tex"
+    citation_package: natbib
+    number_sections: true
+    keep_tex: false
+    fig_caption: true
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, message = FALSE,
+                      tidy.opts = list(width.cutoff = 72),
+                      tidy = TRUE, comment = '',
+                      fig.path='figs/',
+                      cache = TRUE, cache.path = '_cache/')
+# fig.keep = 'all',
+
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  paste0("\n \\", "small","\n\n", x, "\n\n \\small")
+})
+```
+
+\section{\color{UniPDColor}\textsc{Introduction}}
+
+
+Over the past few years, we have grown accustomed to watching movies on OTT (Over-The-Top) streaming—services that deliver content directly to viewers over the internet. These platforms have become an integral part of our daily routines, allowing us to enjoy movies in the comfort of our homes. However, this shift has made us forget the unique joy of sharing emotions with a crowd in a movie theater. 
+
+Particularly after the COVID-19 pandemic, streaming platforms became dominant, and the overwhelming volume of content on these services has made it increasingly difficult for individual films to draw attention in cinemas. This led me to wonder: is traditional cinema culture approaching its end? 
+
+To explore further, this study focuses on the time series analysis and forecasting of cinema admissions in Italy.
+
+\subsection{Problem Definition}
+This study aims to address the following questions:
+\begin{itemize}
+    \item Is traditional cinema culture coming to an end?
+    \item Will OTT services dominate the distribution of movies in the future?
+    \item Have the COVID-19 pandemic and/or OTT platforms impacted theater admissions significantly?
+\end{itemize}
+
+\subsection{The Data Sources}
+The dataset used in this study consists of monthly data spanning from January 2006 to December 2023, complemented by a simplified annual dataset that includes only OTT Subscriptions, OTT Spending, and Cinema Admissions.
+
+The data sources are as follows:
+\begin{itemize}
+    \item \textbf{Società Italiana degli Autori ed Editori (SIAE):}  \\
+    Number of screenings in theaters, cinema admissions, ticket prices, audience spending \cite{SIAE}.
+    \item \textbf{International Video Federation (IVF) \& Statista:}  \\
+    OTT subscriptions and OTT spending (annual data only) \cite{IVF, statista}.
+    \item \textbf{Istituto Nazionale di Statistica (ISTAT):}  \\
+    Consumer Price Index (CPI) (Month-over-Month) for all items, CPI (MoM) for recreation and culture \cite{CPI}.
+    \item \textbf{Istituto Superiore di Sanità (ISS):}  \\
+    Number of reported COVID-19 cases \cite{ISS}.
+    \item \textbf{Google Trends: }  \\
+    Search interest for OTT platforms, used as a proxy for streaming consumption behavior \cite{googtrend}.
+\end{itemize}
+
+
+
+
+

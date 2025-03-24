@@ -36,7 +36,6 @@ library(dplyr)
 library(tidyr)
 #library(splines)
 library(prophet)
-library(MLmetrics)
 ```
 
 # 1) Data Exploration & Preprocessing
@@ -386,44 +385,18 @@ google_trend_ott <- ott_cinema_monthly.ts[,5]
 cpi_all <- ott_cinema_monthly.ts[,6]
 cpi_culture <- ott_cinema_monthly.ts[,7]
 covid_cases <- ott_cinema_monthly.ts[,8]
-
-metrics <- c("Model", "AIC", "DW_Test", "Ljung_Box_pval", "R2", "MAE", "RMSE")
-model_performance <- data.frame(matrix(ncol = length(metrics), nrow = 0))
-colnames(model_performance) <- metrics
 ```
 
 
 ### Multiple Linear Regression with Time Series
 
-```{r full_tslm}
+```{r stepwise_tslm}
 # Fit Initial Full Model
 full_tslm <- tslm(cinema_admissions ~ cinema_screening + cinema_spending + 
                      avg_cinema_spending_pp + google_trend_ott + cpi_all +
                      cpi_culture + covid_cases + trend + season) 
 summary(full_tslm)
-```
 
-
-```{r full_tslm_metrics}
-model_name <- "full tslm"
-aic <- sprintf("%.3f", AIC(full_tslm))
-dw <- sprintf("%.3f", as.numeric(dwtest(full_tslm)$statistic))
-lj_box <- NA
-r2 <- sprintf("%.3f", summary(full_tslm)$r.squared)
-acc <- as.data.frame.array(accuracy(full_tslm))
-mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
-  
-
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
-
-```
-
-### Stepwise Regression
-
-```{r stepwise_tslm}
 # Convert tslm object to lm object
 full_lm <- lm(formula(full_tslm), data = as.data.frame(ott_cinema_monthly.ts))
 
@@ -432,24 +405,13 @@ stepwise_model <- step(full_lm, direction = "both", trace = TRUE)
 
 
 # Display Summary of Selected Model
-summary(stepwise_model)
+summary(stepwise_model) 
+
+AIC(full_tslm, stepwise_model)
+
 ```
 
-
-```{r stepwise_tslm_metrics}
-model_name <- "stepwise tslm"
-aic <- sprintf("%.3f", AIC(stepwise_model))
-dw <- sprintf("%.3f", as.numeric(dwtest(stepwise_model)$statistic))
-lj_box <- NA
-r2 <- sprintf("%.3f", summary(stepwise_model)$r.squared)
-acc <- as.data.frame.array(accuracy(stepwise_model))
-mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
-```
-
+### Stepwise Regression
 
 ```{r stepwise_regression}
 # Extract fitted values from stepwise model
@@ -460,15 +422,17 @@ fitted_stepwise.ts <- ts(fitted_stepwise, start = start(cinema_admissions),
                 frequency = frequency(cinema_admissions))
 
 
-plot(cinema_admissions, type="o", pch = 16, cex=0.6,
+
+plot(cinema_admissions, type = "l", col = "black", lwd = 2, 
+     ylab = "Cinema Admissions",
      main = "Actual vs. Stepwise Model Predictions")
 
 # Add Stepwise Regression Predictions
-lines(fitted_stepwise.ts, col = "orange2", lwd = 2, lty = 1)
+lines(fitted_stepwise.ts, col = "red", lwd = 2, lty = 2)
 
 # Add Legend
-legend("topright", legend = c("Observed", "Predicted (Stepwise)"),
-       col = c("black", "orange2"), lwd = c(1, 2), lty = c(1, 1), bty = "n")
+legend("topright", legend = c("Actual Admissions", "Predicted (Stepwise)"),
+       col = c("black", "red"), lwd = 2, lty = c(1, 2), bty = "n")
 
 ```
 
@@ -504,7 +468,6 @@ diff3<- diff(diff1, lag=12)
 tsdisplay(diff3, main = "cinema_admissions (d=1, D=1, s=12)")
 ```
 
-### ARIMA
 
 ```{r arima1}
 # first Arima model 
@@ -512,12 +475,8 @@ arima1.cinema_admissions<- Arima(cinema_admissions, order=c(2,1,2), seasonal=c(1
 summary(arima1.cinema_admissions)
 fit.arima1.cinema_admissions<- fitted(arima1.cinema_admissions)
 
-plot(cinema_admissions, type="o", pch = 16, cex=0.6, ylab = "Admissions",
-     main = "Observed vs. ARIMA(2,1,2)(1,1,1)[12] predictions")
-lines(fit.arima1.cinema_admissions, col="orange2", lwd=2)
-legend("topright", legend = c("Observed", "ARIMA"),
-       col = c("black", "orange2"), lwd = c(1, 2), lty = c(1, 1), bty = "n")
-
+plot(cinema_admissions, type="o", pch = 16, cex=0.6)
+lines(fit.arima1.cinema_admissions, col="green", lwd=2)
 
 res.arima1.cinema_admissions<- residuals(arima1.cinema_admissions)
 tsdisplay(res.arima1.cinema_admissions)
@@ -526,31 +485,13 @@ checkresiduals(arima1.cinema_admissions)
 ```
 
 
-```{r arima1_metrics}
-model_name <- "ARIMA(2,1,2)(1,1,1)12"
-aic <- sprintf("%.3f", AIC(arima1.cinema_admissions))
-dw <- NA
-lj_box <- sprintf("%.3f", checkresiduals(arima1.cinema_admissions)$p.value)
-r2 <- sprintf("%.3f", R2_Score(fit.arima1.cinema_admissions, cinema_admissions))
-acc <- as.data.frame.array(accuracy(arima1.cinema_admissions))
-mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
-```
-
-
 ```{r auto_arima}
 arima.a.cinema_admissions<- auto.arima(cinema_admissions)
 summary(arima.a.cinema_admissions)
 fit.arima.a.cinema_admissions<- fitted(arima.a.cinema_admissions)
 
-plot(cinema_admissions, type="o", pch = 16, cex=0.6, ylab = "Admissions",
-     main = "Observed vs. autoARIMA predictions")
-lines(fit.arima.a.cinema_admissions, col="purple2", lwd=2)
-legend("topright", legend = c("Observed", "autoARIMA"),
-       col = c("black", "purple2"), lwd = c(1, 2), lty = c(1, 1), bty = "n")
+plot(cinema_admissions, type="o", pch = 16, cex=0.6)
+lines(fit.arima.a.cinema_admissions, col="green", lwd=2)
 
 res.arima.a.cinema_admissions<- residuals(arima.a.cinema_admissions)
 tsdisplay(res.arima.a.cinema_admissions)
@@ -559,53 +500,20 @@ checkresiduals(arima.a.cinema_admissions)
 ```
 
 
-```{r auto_arima_metrics}
-model_name <- "auto.ARIMA"
-aic <- sprintf("%.3f", AIC(arima.a.cinema_admissions))
-dw <- NA
-lj_box <- sprintf("%.3f", checkresiduals(arima.a.cinema_admissions)$p.value)
-r2 <- sprintf("%.3f", R2_Score(fit.arima.a.cinema_admissions, cinema_admissions))
-acc <- as.data.frame.array(accuracy(arima.a.cinema_admissions))
-mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
-```
-
-
-### ARIMAx
-
 ```{r auto_sarimax1}
 xreg1 <- cbind(cinema_screening, cinema_spending, avg_cinema_spending_pp, cpi_all)
-
 sarimax_model1 <- auto.arima(cinema_admissions, xreg = xreg1)
 summary(sarimax_model1)
 
 fit.sarimax1<- fitted(sarimax_model1)
 
 plot(cinema_admissions, type="o", pch = 16, cex=0.6)
-lines(fit.sarimax1, col="purple2", lwd=2)
+lines(fit.sarimax1, col="green", lwd=2)
 
 res.sarimax_model1<- residuals(sarimax_model1)
 tsdisplay(res.sarimax_model1)
 
 checkresiduals(sarimax_model1)
-```
-
-
-```{r auto_sarimax1_metrics}
-model_name <- "auto.ARIMAx"
-aic <- sprintf("%.3f", AIC(sarimax_model1))
-dw <- NA
-lj_box <- sprintf("%.3f", checkresiduals(sarimax_model1)$p.value)
-r2 <- sprintf("%.3f", R2_Score(fit.sarimax1, cinema_admissions))
-acc <- as.data.frame.array(accuracy(sarimax_model1))
-mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
 ```
 
 
@@ -617,7 +525,7 @@ summary(sarimax_model2)
 fit.sarimax2<- fitted(sarimax_model2)
 
 plot(cinema_admissions, type="o", pch = 16, cex=0.6)
-lines(fit.sarimax2, col="orange2", lwd=2)
+lines(fit.sarimax2, col="green", lwd=2)
 
 res.sarimax_model2<- residuals(sarimax_model2)
 tsdisplay(res.sarimax_model2)
@@ -626,18 +534,11 @@ checkresiduals(sarimax_model2)
 ```
 
 
-```{r sarimax2_metrics}
-model_name <- "SARIMAx(1,0,2)(0,1,1)12"
-aic <- sprintf("%.3f", AIC(sarimax_model2))
-dw <- NA
-lj_box <- sprintf("%.3f", checkresiduals(sarimax_model2)$p.value)
-r2 <- sprintf("%.3f", R2_Score(fit.sarimax2, cinema_admissions))
-acc <- as.data.frame.array(accuracy(sarimax_model2))
-mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
+```{r arima_comparisons}
+AIC(arima.a.cinema_admissions, 
+    arima1.cinema_admissions, 
+    sarimax_model1, 
+    sarimax_model2)
 ```
 
 
@@ -677,32 +578,9 @@ predicted_months <- seq(from = max(observed_months) + 1,  # Start from next mont
 ```{r bass_predict}
 # Predict into the future
 pred_BM.cinema_admissions<- predict(BM.cinema_admissions, 
-                                    newx = 1:length(observed_months)) 
-inst_pred_BM.cinema_admissions<- make.instantaneous(pred_BM.cinema_admissions)
-```
-
-
-```{r bass_model_metrics}
-model_name <- "Bass Model"
-aic <- NA
-dw <- NA
-lj_box <- "< 2.2e-16"
-r2 <- sprintf("%.3f", as.numeric(BM.cinema_admissions$Rsquared))
-#acc <- as.data.frame.array(accuracy(sarimax_model2))
-mae <- format(mean(abs(cinema_admissions - inst_pred_BM.cinema_admissions)), big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(sqrt(mean((cinema_admissions - inst_pred_BM.cinema_admissions)^2)), big.mark = ",", nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
-```
-
-
-```{r bass_forecast}
-# Predict into the future
-forecast_BM.cinema_admissions<- predict(BM.cinema_admissions, 
                                     newx = 1:length(c(observed_months, 
                                                       predicted_months))) 
-inst_forecast_BM.cinema_admissions<- make.instantaneous(forecast_BM.cinema_admissions)
+inst_pred_BM.cinema_admissions<- make.instantaneous(pred_BM.cinema_admissions)
 ```
 
 
@@ -710,47 +588,27 @@ inst_forecast_BM.cinema_admissions<- make.instantaneous(forecast_BM.cinema_admis
 
 ```{r GBMe2}
 # GBM exponential shock
-GBM.e2<- GBM(cinema_admissions,shock = "exp",nshock = 2,
+GBM.cinema_admissions<- GBM(cinema_admissions,shock = "exp",nshock = 2,
                                  prelimestimates = c(1.963349e+09, 4.244444e-03, 
                                                      9.822524e-03, 170,-0.1,-1,
                                                      178,-0.7,-0.5)) 
 # m,p,q, a(starting point), b(memory of the shock), c(intensity) 
-summary(GBM.e2)
+summary(GBM.cinema_admissions)
 
-checkresiduals(GBM.e2)
-plot.Dimora(GBM.e2)
-```
-
-
-```{r gbm_pred}
-# Predict into the future
-pred_GBM.e2<- predict(GBM.e2, newx = 1:length(observed_months)) 
-inst_pred_GBM.e2<- make.instantaneous(pred_GBM.e2)
-```
-
-```{r gbm_metrics}
-model_name <- "GBMe2"
-aic <- NA
-dw <- NA
-lj_box <- "< 2.2e-16"
-r2 <- sprintf("%.3f", GBM.e2$Rsquared)
-#acc <- as.data.frame.array(accuracy(sarimax_model2))
-mae <- format(mean(abs(cinema_admissions - inst_pred_GBM.e2)), big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(sqrt(mean((cinema_admissions - inst_pred_GBM.e2)^2)), big.mark = ",", nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
+checkresiduals(GBM.cinema_admissions)
+plot.Dimora(GBM.cinema_admissions)
 ```
 
 
 Future Prediction
 
-```{r gbm_forecast}
+
+```{r gbm_pred}
 # Predict into the future
-forecast_GBM.cinema_admissions<- predict(GBM.e2, 
+pred_GBM.cinema_admissions<- predict(GBM.cinema_admissions, 
                                      newx = 1:length(c(observed_months, 
                                                        predicted_months))) 
-inst_forecast_GBM.cinema_admissions<- make.instantaneous(forecast_GBM.cinema_admissions)
+inst_pred_GBM.cinema_admissions<- make.instantaneous(pred_GBM.cinema_admissions)
 ```
 
 
@@ -759,12 +617,12 @@ inst_forecast_GBM.cinema_admissions<- make.instantaneous(forecast_GBM.cinema_adm
 plot(observed_months, cinema_admissions, type = "o", pch = 16, lty = 3, 
      cex = 0.6, xlab = "Time", ylab = "Monthly Cinema Admissions",
      xlim = range(c(observed_months, predicted_months)), 
-     ylim = c(0, max(cinema_admissions, inst_forecast_GBM.cinema_admissions)))
+     ylim = c(0, max(cinema_admissions, inst_pred_GBM.cinema_admissions)))
 
 # Overlay predicted instantaneous cinema_admissions
-lines(c(observed_months, predicted_months), inst_forecast_BM.cinema_admissions, 
+lines(c(observed_months, predicted_months), inst_pred_BM.cinema_admissions, 
       lwd = 3, col = 2) 
-lines(c(observed_months, predicted_months), inst_forecast_GBM.cinema_admissions, 
+lines(c(observed_months, predicted_months), inst_pred_GBM.cinema_admissions, 
       lwd = 3, col = 3)
 
 legend("topright", c("Bass Model", "GBMe2"), col = c(2, 3),
@@ -777,12 +635,12 @@ legend("topright", c("Bass Model", "GBMe2"), col = c(2, 3),
 
 ```{r gbm_sarmax}
 # SARMAX Refinement
-fit_GBM.e2 <- fitted(GBM.e2)
+fit_GBM.cinema_admissions <- fitted(GBM.cinema_admissions)
 #inst_fit_GBM.cinema_admissions<- make.instantaneous(fit_GBM.cinema_admissions)
 
 GBM.sarmax <- Arima(cumsum(cinema_admissions), order = c(2,1,0), 
                     seasonal = list(order = c(0,1,2), period = 12), 
-                    xreg = fit_GBM.e2)
+                    xreg = fit_GBM.cinema_admissions)
 summary(GBM.sarmax)
 res.GBM.sarmax <- residuals(GBM.sarmax)
 tsdisplay(res.GBM.sarmax)
@@ -794,28 +652,13 @@ inst_fit.GBM.sarmax <- make.instantaneous(fit.GBM.sarmax)
 ```
 
 
-```{r gbm_sarmax}
-model_name <- "GBMe2 + SARIMAx(2,1,0)(0,1,2)12"
-aic <- sprintf("%.3f", AIC(GBM.sarmax))
-dw <- NA
-lj_box <- sprintf("%.3f", Box.test(res.GBM.sarmax, type = "Ljung-Box")$p.value)
-r2 <- sprintf("%.3f", R2_Score(as.numeric(inst_fit.GBM.sarmax), cinema_admissions))
-acc <- as.data.frame.array(accuracy(GBM.sarmax))
-mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
-```
-
-
 ```{r gbm_sarmax_plot}
 plot(observed_months, cinema_admissions, type = "o", pch = 16, lty = 1, 
      cex = 0.6, lwd = 2,
      xlab = "Time", ylab = "Monthly Cinema Admissions",
      xlim = range(c(observed_months, predicted_months)), 
-     ylim = c(0, max(cinema_admissions, inst_forecast_GBM.cinema_admissions)))
-lines(c(observed_months, predicted_months), inst_forecast_GBM.cinema_admissions, 
+     ylim = c(0, max(cinema_admissions, inst_pred_GBM.cinema_admissions)))
+lines(c(observed_months, predicted_months), inst_pred_GBM.cinema_admissions, 
       lwd = 3, col = 3)
 lines(observed_months, inst_fit.GBM.sarmax, lty=1, lwd=1, col=2)
 legend("topright", c("GBMe2", "GBMe2 + SARMAX"), col = c(3, 2),
@@ -828,11 +671,11 @@ plot(observed_months, cumsum(cinema_admissions), type="b", pch = 16, lty = 3,
      cex = 0.6, lwd = 1,
      xlab = "Time", ylab = "Cumulative Monthly Cinema Admissions",
      xlim = range(c(observed_months, predicted_months)))
-lines(c(observed_months, predicted_months), forecast_GBM.cinema_admissions, 
-      lty=4, lwd = 2, col = 3)
-lines(observed_months, cumsum(inst_fit.GBM.sarmax), lty=4, lwd=2, col=2)
+lines(c(observed_months, predicted_months), pred_GBM.cinema_admissions, 
+      lty=4, lwd = 3, col = 3)
+lines(observed_months, cumsum(inst_fit.GBM.sarmax), lty=4, lwd=3, col=2)
 legend("bottomright", c("GBMe2", "GBMe2 + SARMAX"), col = c(3, 2),
-       lty = c(4, 4), lwd = c(2, 2), merge = TRUE, cex=0.8)
+       lty = c(4, 4), lwd = c(3, 3), merge = TRUE, cex=0.8)
 
 ```
 
@@ -841,7 +684,7 @@ legend("bottomright", c("GBMe2", "GBMe2 + SARMAX"), col = c(3, 2),
 
 ```{r gbm_sarmax_future}
 # Create future xreg using GBM model predictions
-future.xreg <- matrix(inst_forecast_GBM.cinema_admissions, ncol = 1)
+future.xreg <- matrix(inst_pred_GBM.cinema_admissions, ncol = 1)
 
 # Forecast SARMAX with xreg
 GBM.sarmax_forecast <- forecast(GBM.sarmax, h = forecast_horizon, xreg = future.xreg)$mean
@@ -852,7 +695,7 @@ plot(observed_months, cinema_admissions, type = "o", pch = 16, lty = 1,
      cex = 0.6, lwd = 2,
      xlab = "Time", ylab = "Monthly Cinema Admissions",
      xlim = range(c(observed_months, predicted_months)), 
-     ylim = c(0, max(cinema_admissions, inst_forecast_GBM.cinema_admissions)))
+     ylim = c(0, max(cinema_admissions, inst_pred_GBM.cinema_admissions)))
 
 lines(observed_months, inst_fit.GBM.sarmax, col = "red", lwd = 1)
 lines(c(observed_months, predicted_months), inst_GBM.sarmax_forecast, 
@@ -924,16 +767,16 @@ prophet_model <- fit.prophet(prophet_model, prophet_data)
 
 ```{r prophet_predict}
 # Generate future dates
-#future <- make_future_dataframe(prophet_model, periods = 12*5, freq = "month", include_history = TRUE)
+future <- make_future_dataframe(prophet_model, periods = 12*5, freq = "month", include_history = TRUE)
 
 # Predict future values
-prophet_predict <- predict(prophet_model, prophet_data)
-prophet_data$prophet_predict <- prophet_predict$yhat
+prophet_forecast <- predict(prophet_model, future)
+
 ```
 
 
 ```{r}
-dyplot.prophet(prophet_model, prophet_predict)
+dyplot.prophet(prophet_model, prophet_forecast)
 ```
 
 
@@ -941,91 +784,77 @@ dyplot.prophet(prophet_model, prophet_predict)
 
 ```{r prophet_predict}
 # Plot the forecast with lockdown effects
-plot(prophet_model, prophet_predict) +
+plot(prophet_model, prophet_forecast) +
   add_changepoints_to_plot(prophet_model)
 
 ```
 
 
-```{r prophet_plot_components}
-prophet_plot_components(prophet_model, prophet_predict)
+```{r}
+prophet_plot_components(prophet_model, prophet_forecast)
 ```
 
 
 ```{r prophet_residuals}
 # Generate residuals
-prophet_residuals <- prophet_data$y - prophet_data$prophet_predict
-prophet_data$prophet_residuals <- prophet_residuals
+prophet_residuals <- prophet_data$y - predict(prophet_model, prophet_data)$yhat
 
 tsdisplay(prophet_residuals)
 ```
 
 
-```{r prophet_metrics}
-model_name <- "Prophet"
-aic <- NA
-dw <- NA
-lj_box <- sprintf("%.3e", as.numeric(Box.test(prophet_residuals, type = "Ljung-Box")$p.value))
-r2 <- sprintf("%.3f", R2_Score(prophet_data$prophet_predict, prophet_data$y))
-mae <- format(mean(abs(prophet_residuals)), big.mark = ",", nsmall = 2, scientific = FALSE)
-rmse <- format(sqrt(mean((prophet_residuals)^2)), big.mark = ",", nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
-```
-
-
-### Prophet with SARIMA refinement
-
 ```{r prophet_residuals_arima}
 prres.arima <- auto.arima(prophet_residuals)
-summary(prres.arima)
 
+summary(prres.arima)
 fit.prres.arima<- fitted(prres.arima)
 
 res.prres.arima<- residuals(prres.arima)
 tsdisplay(res.prres.arima)
-
-prophet_data$combined_predict <- prophet_data$prophet_predict + fit.prres.arima
 ```
 
 
 ```{r prophet_residuals_arima}
-plot(ott_cinema_monthly$ds, ott_cinema_monthly$cinema_admissions, type = "o", 
-     pch = 16, cex=0.6, xlab = "Date", ylab = "Cinema Admissions")
+prophet_fitted <- predict(prophet_model, prophet_data)
 
-lines(ott_cinema_monthly$ds, prophet_data$prophet_predict, col="orange2", lwd=2)
-lines(ott_cinema_monthly$ds, prophet_data$combined_predict, col="purple2", lwd=2)
+plot(ott_cinema_monthly$ds, ott_cinema_monthly$cinema_admissions, 
+     type = "o", pch = 16, cex=0.6, 
+     xlab = "Date", ylab = "Admissions")
+lines(ott_cinema_monthly$ds, prophet_fitted$yhat, 
+      col="orange2", lwd=2, )
+lines(ott_cinema_monthly$ds, prophet_fitted$yhat + fit.prres.arima, 
+      col="purple2", lwd=2)
 
-legend("topright", c("Prophet","Prophet + SARIMA"),
-       col = c("orange2", "purple2"), lty = c(1,1), lwd = 2)
+
 ```
 
 
-```{r prophet_arima_residuals}
-# Generate residuals
-prophet.arima_residuals <- prophet_data$y - prophet_data$combined_predict
+```{r prophet_test}
+# Create a residuals dataframe
+residuals_df <- data.frame(ds = prophet_data$ds, residuals = prophet_residuals)
 
-prophet_data$combined_residuals <- prophet.arima_residuals
+# Plot residuals over time
+ggplot(residuals_df, aes(x = ds, y = residuals)) +
+  geom_line() +
+  ggtitle("Residuals Over Time") +
+  xlab("Date") +
+  ylab("Residuals") +
+  theme_minimal()
 
-tsdisplay(prophet.arima_residuals)
+# Check residual distribution
+ggplot(residuals_df, aes(x = residuals)) +
+  geom_histogram(bins = 30, fill = "blue", alpha = 0.6) +
+  ggtitle("Histogram of Residuals") +
+  xlab("Residuals") +
+  theme_minimal()
+
+# ACF and PACF to check for autocorrelation
+Acf(prophet_residuals, main = "ACF of Prophet Residuals")
+Pacf(prophet_residuals, main = "PACF of Prophet Residuals")
+
 ```
+!!! TODO: ACF LOOKS SIGNIFICANT IN THE FIRST 3 LAGS. HOW I CAN SOLVE THIS?
 
-```{r prophet_arima_metrics}
-model_name <- "Prophet + SARIMA"
-aic <- NA
-dw <- NA
-lj_box <- sprintf("%.3f", as.numeric(Box.test(prophet_data$combined_residuals, 
-                                              type = "Ljung-Box")$p.value))
-r2 <- sprintf("%.3f", R2_Score(prophet_data$combined_predict, prophet_data$y))
-mae <- format(mean(abs(prophet_data$combined_residuals)), big.mark = ",", 
-              nsmall = 2, scientific = FALSE)
-rmse <- format(sqrt(mean((prophet_data$combined_residuals)^2)), big.mark = ",", 
-               nsmall = 2, scientific = FALSE)
-
-model_performance[nrow(model_performance) + 1, ] <- 
-  c(model_name, aic, dw, lj_box, r2, mae, rmse)
-```
 
 
 
@@ -1047,141 +876,6 @@ autoplot(hw.cinema_admissions)+
 ```
 
 !!! TODO: I WANT TO COMPARE THE AIC'S OF ALL THE MODELS I TRIED TO COME UP WITH THE BEST MODEL. THEN I WANT TO USE SOME OF THE BEST MODELS TO FORECAST THE FUTURE OF CINEMA ADMISSIONS.
-
-
-```{r}
-# Function to evaluate model performance
-evaluate_model <- function(model, dataset, prophet_arima = FALSE, model_type = "standard") {
-  
-  # Define fixed column structure
-  column_names <- c("Model", "AIC", "DW_Test", "Ljung_Box_pval", "Adj_AIR2", "MAE", "MAPE", "RMSE")
-  
-  # Compute common metrics
-  aic_value <- if (!inherits(model, "Dimora") && !prophet_arima && !inherits(model, "prophet") && !inherits(model, "forecast")) {
-    AIC(model)
-  } else {
-    NA
-  }
-  
-  dw_test <- if (inherits(model, "lm")) dwtest(model)$statistic else NA
-  ljung_box_pval <- if (!is.null(residuals(model)) && length(residuals(model)) > 1) 
-    Box.test(residuals(model), type = "Ljung-Box")$p.value else NA
-
-  # Standard Models (ARIMA, Linear, Exponential Smoothing)
-  if (inherits(model, "Arima") | inherits(model, "lm") | inherits(model, "ets")) {
-    model_accuracy <- accuracy(model)
-    
-    # Use correct indexing for accuracy() results
-    mae <- if ("MAE" %in% colnames(model_accuracy)) model_accuracy[1, "MAE"] else NA
-    mape <- if ("MAPE" %in% colnames(model_accuracy)) model_accuracy[1, "MAPE"] else NA
-    rmse <- if ("RMSE" %in% colnames(model_accuracy)) model_accuracy[1, "RMSE"] else NA
-
-  # Prophet Model
-  } else if (inherits(model, "prophet")) {
-    prophet_forecast <- predict(model, prophet_data)
-    prophet_forecast$ds <- as.Date(prophet_forecast$ds)
-    prophet_data$ds <- as.Date(prophet_data$ds)
-
-    prophet_merged <- merge(prophet_forecast[, c("ds", "yhat")], 
-                            prophet_data[, c("ds", "y")], by = "ds")
-
-    mae <- mean(abs(prophet_merged$y - prophet_merged$yhat))
-    mape <- mean(abs((prophet_merged$y - prophet_merged$yhat) / prophet_merged$y)) * 100
-    rmse <- sqrt(mean((prophet_merged$y - prophet_merged$yhat)^2))
-
-  # Prophet + ARIMA (Residual ARIMA Applied to Prophet)
-  } else if (prophet_arima) {
-    final_forecast <- prophet_fitted$yhat + fit.prres.arima
-    mae <- mean(abs(dataset - final_forecast))
-    mape <- mean(abs((dataset - final_forecast) / dataset)) * 100
-    rmse <- sqrt(mean((dataset - final_forecast)^2))
-
-  # Bass Model (Convert to Instantaneous)
-  } else if (model_type == "bass") {
-    fitted_values <- make.instantaneous(BM.cinema_admissions$fitted)
-
-    # Compute metrics if lengths match
-    if (length(fitted_values) == length(dataset)) {
-      mae <- mean(abs(dataset - fitted_values), na.rm = TRUE)
-      mape <- mean(abs((dataset - fitted_values) / dataset), na.rm = TRUE) * 100
-      rmse <- sqrt(mean((dataset - fitted_values)^2, na.rm = TRUE))
-    } else {
-      mae <- NA
-      mape <- NA
-      rmse <- NA
-    }
-
-  # GBM (Convert to Instantaneous)
-  } else if (model_type == "gbm") {
-    fitted_values <- make.instantaneous(as.numeric(fitted(GBM.cinema_admissions)))
-
-    # Compute metrics if lengths match
-    if (length(fitted_values) == length(dataset)) {
-      mae <- mean(abs(dataset - fitted_values), na.rm = TRUE)
-      mape <- mean(abs((dataset - fitted_values) / dataset), na.rm = TRUE) * 100
-      rmse <- sqrt(mean((dataset - fitted_values)^2, na.rm = TRUE))
-    } else {
-      mae <- NA
-      mape <- NA
-      rmse <- NA
-    }
-
-  } else {
-    mae <- NA
-    mape <- NA
-    rmse <- NA
-  }
-
-  # Create and return structured data frame
-  result <- data.frame(Model = deparse(substitute(model)), 
-                       AIC = aic_value, DW_Test = dw_test, Ljung_Box_pval = ljung_box_pval, 
-                       MAE = mae, MAPE = mape, RMSE = rmse, stringsAsFactors = FALSE)
-
-  # Ensure column order consistency
-  result <- result[, column_names, drop = FALSE]
-  return(result)
-}
-
-# Define models
-models <- list(
-  "Full Linear Model" = full_tslm,
-  "Stepwise Regression" = stepwise_model,
-  "ARIMA" = arima.a.cinema_admissions,
-  "SARIMAX" = sarimax_model1,
-  "Bass Model" = BM.cinema_admissions,
-  "GBM" = GBM.cinema_admissions,
-  "Prophet" = prophet_model,
-  "D Holt-Winters" = hw.cinema_admissions
-)
-
-# Evaluate and store metrics for each model
-model_performance <- data.frame()
-for (model_name in names(models)) {
-  model_results <- evaluate_model(models[[model_name]], cinema_admissions, 
-                                  model_type = ifelse(model_name == "Bass Model", "bass", 
-                                                      ifelse(model_name == "GBM", "gbm", "standard")))
-  model_performance <- rbind(model_performance, cbind(Model = model_name, model_results))
-}
-
-# **Evaluate Prophet + ARIMA separately**
-prophet_arima_results <- evaluate_model(prres.arima, cinema_admissions, prophet_arima = TRUE)
-
-# Ensure "Model" column is correctly assigned **before** merging
-prophet_arima_results$Model <- "Prophet + ARIMA"
-
-# **Ensure column names match before appending**
-prophet_arima_results <- prophet_arima_results[, colnames(model_performance), drop = FALSE]
-
-# **Append to model performance**
-model_performance <- rbind(model_performance, prophet_arima_results)
-
-# **Remove duplicate "Model" column if it exists**
-model_performance <- model_performance[, !duplicated(colnames(model_performance))]
-
-# **Print final model comparison**
-print(model_performance)
-
-```
 
 
 
@@ -1337,216 +1031,5 @@ UCRCD.adm.subs.norm<- UCRCD(
 )
 summary(UCRCD.adm.subs.norm)
 ```
-
-```{r}
-# Create an empty dataframe to store model performance
-model_performance <- data.frame(
-  Model = character(),
-  AIC = numeric(),
-  DW_Test = numeric(),
-  Ljung_Box_pval = numeric(),
-  MAE = numeric(),
-  MAPE = numeric(),
-  RMSE = numeric(),
-  stringsAsFactors = FALSE
-)
-
-evaluate_model <- function(model, dataset) {
-  # Handle AIC
-  aic_value <- if (!inherits(model, "Dimora")) AIC(model) else NA
-  
-  # Handle Durbin-Watson Test (only for regression models)
-  dw_test <- if ("terms" %in% attributes(model)) dwtest(model)$statistic else NA
-  
-  # Handle Ljung-Box Test for residual autocorrelation
-  ljung_box_pval <- Box.test(residuals(model), type = "Ljung-Box")$p.value
-  
-  # Extract error metrics safely
-  if (inherits(model, "Arima") | inherits(model, "lm")) {
-    model_accuracy <- accuracy(model)
-    mae <- model_accuracy[1, "MAE"]   # Extract from "Training set"
-    mape <- model_accuracy[1, "MAPE"] # Extract from "Training set"
-    rmse <- model_accuracy[1, "RMSE"] # Extract from "Training set"
-  } else {
-    mae <- NA
-    mape <- NA
-    rmse <- NA
-  }
-
-  return(c(AIC = aic_value, DW_Test = dw_test, Ljung_Box_pval = ljung_box_pval, 
-           MAE = mae, MAPE = mape, RMSE = rmse))
-}
-
-
-```
-
-
-```{r}
-model_performance <- rbind(model_performance, 
-                           c("Full Linear Model", 
-                             evaluate_model(full_tslm, cinema_admissions)))
-model_performance <- rbind(model_performance, 
-                           c("Stepwise Regression", 
-                             evaluate_model(stepwise_model, cinema_admissions)))
-model_performance <- rbind(model_performance, 
-                           c("ARIMA", 
-                             evaluate_model(arima.a.cinema_admissions, cinema_admissions)))
-model_performance <- rbind(model_performance, 
-                           c("SARIMAX", 
-                             evaluate_model(sarimax_model1, cinema_admissions)))
-model_performance <- rbind(model_performance, 
-                           c("Bass Model", 
-                             evaluate_model(BM.cinema_admissions, cinema_admissions)))
-model_performance <- rbind(model_performance, 
-                           c("GBM", 
-                             evaluate_model(GBM.cinema_admissions, cinema_admissions)))
-
-```
-
-
-```{r}
-model_performance
-```
-
-
-```{r}
-# Create an empty dataframe with correct column names
-model_performance <- data.frame(
-  Model = character(),
-  AIC = numeric(),
-  DW_Test = numeric(),
-  Ljung_Box_pval = numeric(),
-  MAE = numeric(),
-  MAPE = numeric(),
-  RMSE = numeric(),
-  stringsAsFactors = FALSE
-)
-
-# Function to compute performance metrics
-evaluate_model <- function(model, dataset) {
-  aic_value <- if (!inherits(model, "Dimora")) AIC(model) else NA
-  dw_test <- if ("terms" %in% attributes(model)) dwtest(model)$statistic else NA
-  ljung_box_pval <- Box.test(residuals(model), type = "Ljung-Box")$p.value
-
-  if (inherits(model, "Arima") | inherits(model, "lm")) {
-    model_accuracy <- accuracy(model)
-    mae <- model_accuracy[1, "MAE"]
-    mape <- model_accuracy[1, "MAPE"]
-    rmse <- model_accuracy[1, "RMSE"]
-  } else {
-    mae <- NA
-    mape <- NA
-    rmse <- NA
-  }
-
-  return(data.frame(AIC = aic_value, DW_Test = dw_test, Ljung_Box_pval = ljung_box_pval, 
-                    MAE = mae, MAPE = mape, RMSE = rmse))
-}
-
-# Evaluate and store metrics for each model
-models <- list(
-  "Full Linear Model" = full_tslm,
-  "Stepwise Regression" = stepwise_model,
-  "ARIMA" = arima.a.cinema_admissions,
-  "SARIMAX" = sarimax_model1,
-  "Bass Model" = BM.cinema_admissions,
-  "GBM" = GBM.cinema_admissions
-)
-
-for (model_name in names(models)) {
-  model_results <- evaluate_model(models[[model_name]], cinema_admissions)
-  model_performance <- rbind(model_performance, cbind(Model = model_name, model_results))
-}
-
-# Display model comparison results
-print(model_performance)
-
-```
-
-
-```{r}
-evaluate_model <- function(model, dataset, prophet_arima = FALSE) {
-  # Handle AIC (Not available for Prophet, Bass, and GBM models)
-  if (!inherits(model, "Dimora") && !prophet_arima && !inherits(model, "prophet")) {
-    aic_value <- AIC(model)
-  } else {
-    aic_value <- NA  # Prophet, GBM, and Bass Model don't support AIC
-  }
-
-  # Handle Durbin-Watson Test (Only for Linear Models)
-  if (inherits(model, "lm")) {
-    dw_test <- dwtest(model)$statistic
-  } else {
-    dw_test <- NA  # Not applicable for ARIMA, Prophet, Bass, GBM
-  }
-
-  # Handle Ljung-Box Test (Only if residuals exist)
-  if (!is.null(residuals(model)) && length(residuals(model)) > 1) {
-    ljung_box_pval <- Box.test(residuals(model), type = "Ljung-Box")$p.value
-  } else {
-    ljung_box_pval <- NA  # Skip if no residuals available
-  }
-
-  # Performance Metrics for Standard Models
-  if (inherits(model, "Arima") | inherits(model, "lm")) {
-    model_accuracy <- accuracy(model)
-    mae <- model_accuracy[1, "MAE"]
-    mape <- model_accuracy[1, "MAPE"]
-    rmse <- model_accuracy[1, "RMSE"]
-  
-  # Prophet Performance
-  } else if (inherits(model, "prophet")) {
-    mae <- mean(abs(model$history$y - model$history$yhat), na.rm = TRUE)
-    mape <- mean(abs((model$history$y - model$history$yhat) / model$history$y), na.rm = TRUE) * 100
-    rmse <- sqrt(mean((model$history$y - model$history$yhat)^2, na.rm = TRUE))
-
-  # Prophet + ARIMA Evaluation (Special Case)
-  } else if (prophet_arima) {
-    prophet_residuals <- dataset - prophet_model$history$yhat  # Compute Prophet residuals
-    arima_residuals <- fitted(prophet_arima_model)            # ARIMA modeled residuals
-    final_forecast <- prophet_model$history$yhat + arima_residuals  # Combine forecasts
-    
-    mae <- mean(abs(dataset - final_forecast), na.rm = TRUE)
-    mape <- mean(abs((dataset - final_forecast) / dataset), na.rm = TRUE) * 100
-    rmse <- sqrt(mean((dataset - final_forecast)^2, na.rm = TRUE))
-  } else {
-    mae <- NA
-    mape <- NA
-    rmse <- NA
-  }
-
-  return(data.frame(AIC = aic_value, DW_Test = dw_test, Ljung_Box_pval = ljung_box_pval, 
-                    MAE = mae, MAPE = mape, RMSE = rmse))
-}
-
-
-# Model List (Excluding Prophet + ARIMA as a standalone model)
-models <- list(
-  "Full Linear Model" = full_tslm,
-  "Stepwise Regression" = stepwise_model,
-  "ARIMA" = arima.a.cinema_admissions,
-  "SARIMAX" = sarimax_model1,
-  "Bass Model" = BM.cinema_admissions,
-  "GBM" = GBM.cinema_admissions,
-  "Prophet" = prophet_model
-)
-
-# Evaluate and store metrics for each model
-model_performance <- data.frame()
-for (model_name in names(models)) {
-  model_results <- evaluate_model(models[[model_name]], cinema_admissions)
-  model_performance <- rbind(model_performance, cbind(Model = model_name, model_results))
-}
-
-# Evaluate Prophet + ARIMA Separately
-prophet_arima_results <- evaluate_model(prres.arima, cinema_admissions, prophet_arima = TRUE)
-prophet_arima_results$Model <- "Prophet + ARIMA"
-model_performance <- rbind(model_performance, prophet_arima_results)
-
-# Display model comparison results
-print(model_performance)
-```
-
-
 
 
