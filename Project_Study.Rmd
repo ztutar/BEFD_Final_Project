@@ -32,8 +32,6 @@ library(car)
 library(dplyr)
 library(tidyr)
 library(prophet)
-#library(Metrics)
-library(MLmetrics)
 ```
 
 # 1) Data Exploration & Preprocessing
@@ -487,7 +485,7 @@ aic <- sprintf("%.3f", AIC(arima1.cinema_admissions))
 dw <- NA
 lj_box <- sprintf("%.3f", checkresiduals(arima1.cinema_admissions)$p.value)
 r2 <- sprintf("%.3f", R2_Score(fit.arima1.cinema_admissions, cinema_admissions))
-acc <- as.data.frame.array(accuracy(arima1.cinema_admissions))
+acc <- as.data.frame.array(forecast::accuracy(arima1.cinema_admissions))
 mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
 rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
 
@@ -520,7 +518,7 @@ aic <- sprintf("%.3f", AIC(arima.a.cinema_admissions))
 dw <- NA
 lj_box <- sprintf("%.3f", checkresiduals(arima.a.cinema_admissions)$p.value)
 r2 <- sprintf("%.3f", R2_Score(fit.arima.a.cinema_admissions, cinema_admissions))
-acc <- as.data.frame.array(accuracy(arima.a.cinema_admissions))
+acc <- as.data.frame.array(forecast::accuracy(arima.a.cinema_admissions))
 mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
 rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
 
@@ -555,7 +553,7 @@ aic <- sprintf("%.3f", AIC(sarimax_model1))
 dw <- NA
 lj_box <- sprintf("%.3f", checkresiduals(sarimax_model1)$p.value)
 r2 <- sprintf("%.3f", R2_Score(fit.sarimax1, cinema_admissions))
-acc <- as.data.frame.array(accuracy(sarimax_model1))
+acc <- as.data.frame.array(forecast::accuracy(sarimax_model1))
 mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
 rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
 
@@ -587,7 +585,7 @@ aic <- sprintf("%.3f", AIC(sarimax_model2))
 dw <- NA
 lj_box <- sprintf("%.3f", checkresiduals(sarimax_model2)$p.value)
 r2 <- sprintf("%.3f", R2_Score(fit.sarimax2, cinema_admissions))
-acc <- as.data.frame.array(accuracy(sarimax_model2))
+acc <- as.data.frame.array(forecast::accuracy(sarimax_model2))
 mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
 rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
 
@@ -888,7 +886,7 @@ prophet_data$prophet_predict <- prophet_predict$yhat
 
 
 ```{r}
-dyplot.prophet(prophet_model, prophet_predict)
+#dyplot.prophet(prophet_model, prophet_predict)
 ```
 
 
@@ -1120,7 +1118,7 @@ General indication (for differenced data):
 - If the ACF is exponentially decaying or sinusoidal and there is a significant spike at lag p in PACF and nothing else, it may be an ARIMA(p,d,0). 
 - If the PACF is exponentially decaying or sinusoidal and there is a significant spike at lag q in ACF and nothing else, it may be an ARIMA(0,d,q). 
 
-```{r xreg_future}
+```{r xreg_future_tsdisplay}
 tsdisplay(residuals(f_screening))
 tsdisplay(residuals(f_spending))
 tsdisplay(residuals(f_avg_spending))
@@ -1148,11 +1146,11 @@ y_range <- range(c(cinema_admissions, sarimax_mean, sarimax_upper, sarimax_lower
 # Base plot with actual data and fitted values
 plot(ott_cinema_monthly$ds, ott_cinema_monthly$cinema_admissions, type = "o", pch = 16, cex = 0.6,
      xlab = "Date", ylab = "Cinema Admissions",
-     main = "SARIMAx Fitted and Forecast",
+     main = "ARIMAx Fitted and Forecast",
      xlim = range(full_dates),
      ylim = y_range)
 
-lines(fit.sarimax2, col = "orange2", lwd = 2)
+lines(ott_cinema_monthly$ds, fit.sarimax2, col = "orange2", lwd = 2)
 
 # Add forecast confidence interval (shaded)
 forecast_dates <- seq(from = as.Date("2024-01-01"), by = "month", length.out = horizon)
