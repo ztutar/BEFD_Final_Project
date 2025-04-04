@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
   comment = '',      # Removes default comment markers (##) in output
   fig.path='plots/',  # Saves figures to the 'plots/' directory
   cache = TRUE,      # Enables caching to avoid redundant computations
-  cache.path = '_cache/', # Defines cache storage location
+  cache.path = 'Project_Study_cache/', # Defines cache storage location
   dev = "png",
   out.width="80%"
 )
@@ -32,6 +32,8 @@ library(car)
 library(dplyr)
 library(tidyr)
 library(prophet)
+library(MLmetrics)
+library(knitr)
 ```
 
 # 1) Data Exploration & Preprocessing
@@ -81,8 +83,8 @@ plot(ott_cinema_monthly.ts, main="Monthly Cinema-OTT Dataset", cex.lab=0.45,
 ```
 
 ```{r plot_annual_raw}
-plot(ott_cinema_annual.ts, main="Annual Cinema - OTT Dataset", cex.lab=0.45, 
-     type="o", pch = 16, lty = 3, cex=0.6)
+plot(ott_cinema_annual.ts, main="Annual Cinema - OTT Dataset", cex.lab=0.6, 
+     type="o", pch = 16, lty = 3, cex=0.6, xlab="")
 ```
 
 ## Handle Missing Values
@@ -157,18 +159,19 @@ for (col in columns_to_impute) {
 ```
 
 
-```{r missing_vs_imputed, out.width="50%"}
+```{r missing_vs_imputed, fig.show="hold", out.width="50%"}
 # Plot the original and imputed data for comparison
+par(mfrow = c(4, 2), mar = c(2, 3, 1.5, 1))
 for (col in columns_to_impute) {
-  par(mfrow = c(2, 1), mar = c(4, 4, 2, 1))
+  #par(mfrow = c(2, 1), mar = c(4, 4, 2, 1))
   
   # Plot the original data
   plot(ott_cinema_monthly.ts[, col], type = "o", pch = 16, lty = 3, cex = 0.4,
-       main = paste("Original", col), xlab = "Time", ylab = col)
+       main = paste("Original", col), xlab = "", ylab = "")
   
   # Plot the imputed data
   plot(cinema_imputed[, col], type = "o", pch = 16, lty = 3, cex = 0.4,
-       main = paste("Imputed", col), xlab = "Time", ylab = col)
+       main = paste("Imputed", col), xlab = "", ylab = "")
 }
 
 par(mfrow = c(1, 1))
@@ -218,7 +221,8 @@ vif_model.monthly <- lm(ott_cinema_monthly$cinema_admissions ~
                           .-ott_cinema_monthly$cinema_admissions, 
                         data = ott_cinema_monthly[,-1]) 
 # Compute VIF
-vif(vif_model.monthly) 
+VIF.values <- vif(vif_model.monthly)
+kable(as.data.frame(VIF.values), caption = "VIF Table for Monthly Data")
 ```
 
 
@@ -369,7 +373,7 @@ aic <- sprintf("%.3f", AIC(full_tslm))
 dw <- sprintf("%.3f", as.numeric(dwtest(full_tslm)$statistic))
 lj_box <- NA
 r2 <- sprintf("%.3f", summary(full_tslm)$r.squared)
-acc <- as.data.frame.array(accuracy(full_tslm))
+acc <- as.data.frame.array(forecast::accuracy(full_tslm))
 mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
 rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
   
@@ -403,7 +407,7 @@ aic <- sprintf("%.3f", AIC(stepwise_model))
 dw <- sprintf("%.3f", as.numeric(dwtest(stepwise_model)$statistic))
 lj_box <- NA
 r2 <- sprintf("%.3f", summary(stepwise_model)$r.squared)
-acc <- as.data.frame.array(accuracy(stepwise_model))
+acc <- as.data.frame.array(forecast::accuracy(stepwise_model))
 mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
 rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
 
@@ -753,7 +757,7 @@ aic <- sprintf("%.3f", AIC(GBM.sarmax))
 dw <- NA
 lj_box <- sprintf("%.3f", checkresiduals(GBM.sarmax)$p.value)
 r2 <- sprintf("%.3f", R2_Score(as.numeric(inst_fit.GBM.sarmax), cinema_admissions))
-acc <- as.data.frame.array(accuracy(GBM.sarmax))
+acc <- as.data.frame.array(forecast::accuracy(GBM.sarmax))
 mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
 rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
 
@@ -824,9 +828,9 @@ legend("topright", c("Observed", "GBM SARMAX Refinement","SARMAX Forecast"),
 # Define COVID-19 lockdown periods as holidays in Prophet
 lockdowns <- data.frame(
   holiday = c("lockdown_1", "lockdown_2"),
-  ds = as.Date(c("2020-03-01", "2020-11-01")),  # Start dates
-  lower_window = c(0, 0),  # Start at the given date
-  upper_window = c(110, 200)  # Duration of lockdown periods
+  ds = as.Date(c("2020-03-01", "2020-11-01")),  
+  lower_window = c(0, 0),  
+  upper_window = c(110, 200)  
 )
 holiday_season <- data.frame(
   holiday = "christmas_newyear",
@@ -1006,7 +1010,7 @@ aic <- sprintf("%.3f",hw.cinema_admissions$model$aic)
 dw <- NA
 lj_box <- sprintf("%.3e", checkresiduals(hw.cinema_admissions)$p.value)
 r2 <- sprintf("%.3f", R2_Score(hw.cinema_admissions$fitted, cinema_admissions))
-acc <- as.data.frame.array(accuracy(hw.cinema_admissions))
+acc <- as.data.frame.array(forecast::accuracy(hw.cinema_admissions))
 mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
 rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
 
@@ -1081,7 +1085,7 @@ lines(ott_cinema_monthly$ds, prophet_data$combined_predict, col = "purple2", lwd
 # Add confidence interval (shaded band)
 polygon(c(as.Date(forecast_dates), rev(as.Date(forecast_dates))),
         c(combined_upper, rev(combined_lower)),
-        col = rgb(0, 0, 1, 0.2), border = NA)  # light blue transparent
+        col = rgb(0, 0, 1, 0.2), border = NA)  
 
 # Add forecast line
 lines(as.Date(forecast_dates), final_forecast, col = "blue", lwd = 2, lty = 2)
@@ -1156,7 +1160,7 @@ lines(ott_cinema_monthly$ds, fit.sarimax2, col = "orange2", lwd = 2)
 forecast_dates <- seq(from = as.Date("2024-01-01"), by = "month", length.out = horizon)
 polygon(c(forecast_dates, rev(forecast_dates)),
         c(sarimax_upper, rev(sarimax_lower)),
-        col = rgb(0, 0, 1, 0.2), border = NA)  # semi-transparent 
+        col = rgb(0, 0, 1, 0.2), border = NA)  
 
 # Add forecast line
 lines(forecast_dates, sarimax_mean, col = "blue", lwd = 2, lty = 2)
@@ -1201,15 +1205,15 @@ Estimating initial parameters with Bass Model:
 ```{r initial_UCRCD_bass}
 # Cinema Admissions
 BM.cinema_admissions<-BM(ott_cinema_annual$cinema_admissions, display = T)
-m.c = BM.cinema_admissions$Estimate[1, 1]     # Market potential for Cinema
-p.c = BM.cinema_admissions$Estimate[2, 1]    # Innovation coefficient for Cinema
-q.c = BM.cinema_admissions$Estimate[3, 1]    # Imitation coefficient for Cinema
+m.c = BM.cinema_admissions$Estimate[1, 1]     
+p.c = BM.cinema_admissions$Estimate[2, 1]    
+q.c = BM.cinema_admissions$Estimate[3, 1]   
 
 # OTT Subscriptions
 BM.ott_subscriptions<-BM(ott_cinema_annual$ott_subscriptions_M*1e6, display = T)
-m.o = BM.ott_subscriptions$Estimate[1, 1]     # Market potential for OTT
-p.o = BM.ott_subscriptions$Estimate[2, 1] # Innovation coefficient for OTT
-q.o = BM.ott_subscriptions$Estimate[3, 1]  # Imitation coefficient for OTT
+m.o = BM.ott_subscriptions$Estimate[1, 1]  
+p.o = BM.ott_subscriptions$Estimate[2, 1]
+q.o = BM.ott_subscriptions$Estimate[3, 1]
 
 ```
 

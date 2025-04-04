@@ -287,21 +287,23 @@ $endif$
 $if(footnotes-pretty)$
 % load footmisc in order to customize footnotes (footmisc has to be loaded before hyperref, cf. https://tex.stackexchange.com/a/169124/144087)
 \usepackage[hang,flushmargin,bottom,multiple]{footmisc}
-\setlength{\footnotemargin}{0.8em} % set space between footnote nr and text
+\setlength{\footnotemargin}{0.2em} % set space between footnote nr and text
 \setlength{\footnotesep}{\baselineskip} % set space between multiple footnotes
 \setlength{\skip\footins}{0.2cm} % set space between page content and footnote
-\setlength{\footskip}{0.3cm} % set space between footnote and page bottom
+\setlength{\footskip}{0.5cm} % set space between footnote and page bottom
 $endif$
 $if(geometry)$
 $if(beamer)$
 \geometry{$for(geometry)$$geometry$$sep$,$endfor$}
 $else$
+%\usepackage[top=1in, bottom=0.8in, left=2cm, right=2cm]{geometry}
 \usepackage[$for(geometry)$$geometry$$sep$,$endfor$]{geometry}
 $endif$
 $else$
 $if(beamer)$
 $else$
-\usepackage[margin=1.5cm,includehead=true,includefoot=true,centering,$for(geometry)$$geometry$$sep$,$endfor$]{geometry}
+% geometry setup
+\usepackage[top=1in, bottom=0.8in, left=1.5cm, right=1.5cm]{geometry}
 $endif$
 $endif$
 $if(titlepage-logo)$
@@ -367,6 +369,8 @@ $if(footnotes-disable-backlinks)$
 $else$
 \usepackage{footnotebackref}
 $endif$
+\usepackage{wrapfig}
+\usepackage[section]{placeins}
 $if(graphics)$
 \usepackage{graphicx}
 \makeatletter
@@ -616,7 +620,8 @@ $if(titlepage-background)$
 $endif$
 $if(geometry)$
 $else$
-\usepackage[margin=1.5cm,includehead=true,includefoot=true,centering]{geometry}
+% geometry setup
+\usepackage[top=1in, bottom=0.8in, left=1.5cm, right=1.5cm]{geometry}
 $endif$
 $endif$
 
@@ -638,7 +643,7 @@ $endif$
 %{HTML}{777777}
 $if(beamer)$
 $else$
-\usepackage[font={stretch=1.2}, textfont={color=caption-color}, position=top, skip=2mm, labelfont=bf, singlelinecheck=false, justification=centering]{caption}
+\usepackage[font={stretch=0.8}, textfont={color=caption-color}, position=top, skip=2mm, labelfont=bf, singlelinecheck=false, justification=centering]{caption}
 \setcapindent{0em}
 $endif$
 
@@ -1126,4 +1131,5 @@ $for(include-after)$
 $include-after$
 
 $endfor$
+
 \end{document}
