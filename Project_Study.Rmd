@@ -225,20 +225,6 @@ VIF.values <- vif(vif_model.monthly)
 kable(as.data.frame(VIF.values), caption = "VIF Table for Monthly Data")
 ```
 
-
-```{r}
-# Compute correlation matrix
-#cor_matrix_annual <- cor(ott_cinema_annual[,-1], use = "complete.obs")
-
-# Visualize correlation matrix
-#corrplot(cor_matrix_annual, method = "color", type = "lower",
-#         tl.col = "black", tl.srt = 45, addCoef.col = "black",
-#         number.cex = 0.65, , tl.cex=0.55)
-#title(main = "Correlation Matrix: Annual Data", line = 2, cex.main = 1.2)
-
-```
-
-
 ### Check correlation & trends between OTT Data (Annual) and Google Trends OTT (Monthly)
 
 ```{r agg_google}
@@ -261,13 +247,6 @@ cor_matrix <- cor(merged_ott_data[,-1], use = "complete.obs")
 cor_matrix
 ```
 
-
-```{r}
-# Visualize Correlation Matrix
-#corrplot(cor_matrix, method = "color", type = "lower", tl.col = "black", tl.srt = 45, addCoef.col = "black", number.cex = 0.8, tl.cex=0.65)
-```
-
-
 ```{r minmax_merged_ott}
 min_max_scale <- function(x) {
   return ((x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)))
@@ -282,12 +261,6 @@ merged_ott_data$ott_spending_scaled <-
 
 merged_ott_data$google_trend_ott_scaled <- 
   min_max_scale(merged_ott_data$google_trend_ott)
-```
-
-
-```{r}
-# Convert Year to Date format for better plotting
-#merged_ott_data$Year <- as.Date(paste0(merged_ott_data$Year, "-01-01"))
 ```
 
 
@@ -307,8 +280,6 @@ legend("topleft",
 
 
 ## Time Series Decomposition
-
-
 ```{r cinema_admissions}
 # Extract Cinema Admissions time series
 cinema_admissions <- ott_cinema_monthly.ts[, "cinema_admissions"]
@@ -470,7 +441,7 @@ summary(arima1.cinema_admissions)
 fit.arima1.cinema_admissions<- fitted(arima1.cinema_admissions)
 
 plot(cinema_admissions, type="o", pch = 16, cex=0.6, ylab = "Admissions",
-     main = "Observed vs. ARIMA(2,1,2)(1,1,1)[12] predictions")
+     main = "Observed vs. ARIMA(2,1,5)(0,1,1)[12] predictions")
 lines(fit.arima1.cinema_admissions, col="orange2", lwd=2)
 legend("topright", legend = c("Observed", "ARIMA"),
        col = c("black", "orange2"), lwd = c(1, 2), lty = c(1, 1), bty = "n")
@@ -478,8 +449,6 @@ legend("topright", legend = c("Observed", "ARIMA"),
 
 res.arima1.cinema_admissions<- residuals(arima1.cinema_admissions)
 tsdisplay(res.arima1.cinema_admissions)
-
-#checkresiduals(arima1.cinema_admissions)
 ```
 
 
@@ -511,8 +480,6 @@ legend("topright", legend = c("Observed", "autoARIMA"),
 
 res.arima.a.cinema_admissions<- residuals(arima.a.cinema_admissions)
 tsdisplay(res.arima.a.cinema_admissions)
-
-#checkresiduals(arima.a.cinema_admissions)
 ```
 
 
@@ -546,8 +513,6 @@ lines(fit.sarimax1, col="purple2", lwd=2)
 
 res.sarimax_model1<- residuals(sarimax_model1)
 tsdisplay(res.sarimax_model1)
-
-checkresiduals(sarimax_model1)
 ```
 
 
@@ -575,11 +540,11 @@ fit.sarimax2<- fitted(sarimax_model2)
 
 plot(cinema_admissions, type="o", pch = 16, cex=0.6)
 lines(fit.sarimax2, col="orange2", lwd=2)
+legend("topright", legend = c("Observed", "ARIMAx"),
+       col = c("black", "orange2"), lwd = c(1, 2), lty = c(1, 1), bty = "n")
 
 res.sarimax_model2<- residuals(sarimax_model2)
 tsdisplay(res.sarimax_model2)
-
-#checkresiduals(sarimax_model2)
 ```
 
 
@@ -612,7 +577,7 @@ checkresiduals(BM.cinema_admissions)
 plot.Dimora(BM.cinema_admissions)
 ```
 
-Future Prediction
+Prediction
 
 ```{r}
 # Generate time index for observed data (2006 to 2023, monthly)
@@ -621,10 +586,10 @@ observed_months <- seq(as.Date("2006-01-01"), as.Date("2023-12-01"), by = "month
 #predicted_months <- seq(as.Date("2006-01-01"), as.Date("2033-12-01"), by = "month")
 
 # Set prediction horizon
-forecast_horizon <- 60  
+forecast_horizon <- 12*5  
 
 # Start predictions from the first month after observed data ends
-predicted_months <- seq(from = max(observed_months) + 1,  # Start from next month
+predicted_months <- seq(from = max(observed_months) + 31,  # Start from next month
                          by = "month",                    
                          length.out = forecast_horizon)   
 
@@ -700,7 +665,7 @@ model_performance[nrow(model_performance) + 1, ] <-
 ```
 
 
-Future Prediction
+Prediction
 
 ```{r gbm_forecast}
 # Predict into the future
@@ -725,12 +690,11 @@ lines(c(observed_months, predicted_months), inst_forecast_GBM.cinema_admissions,
       lwd = 3, col = 3)
 
 legend("topright", c("Bass Model", "GBMe2"), col = c(2, 3),
-       lty = c(1, 1), lwd = c(3, 3), merge = TRUE, cex=0.8)
+       lty = c(1, 1), lwd = c(3, 3), merge = TRUE, cex=0.8, bty = "n")
 ```
 
 
-### GBM with ARIMAx refinement
-
+### GBM with SARIMAx refinement
 
 ```{r gbm_sarmax}
 # SARMAX Refinement
@@ -743,8 +707,6 @@ GBM.sarmax <- Arima(cumsum(cinema_admissions), order = c(2,1,0),
 summary(GBM.sarmax)
 res.GBM.sarmax <- residuals(GBM.sarmax)
 tsdisplay(res.GBM.sarmax)
-
-checkresiduals(GBM.sarmax)
 
 fit.GBM.sarmax <- fitted(GBM.sarmax)
 inst_fit.GBM.sarmax <- make.instantaneous(fit.GBM.sarmax)
@@ -776,7 +738,7 @@ lines(c(observed_months, predicted_months), inst_forecast_GBM.cinema_admissions,
       lwd = 3, col = 3)
 lines(observed_months, inst_fit.GBM.sarmax, lty=1, lwd=1, col=2)
 legend("topright", c("GBMe2", "GBMe2 + SARMAX"), col = c(3, 2),
-       lty = c(1, 1), lwd = c(3, 1), merge = TRUE, cex=0.8)
+       lty = c(1, 1), lwd = c(3, 1), merge = TRUE, cex=0.8, bty = "n")
 ```
 
 ```{r gbm_sarmax_cumsum}
@@ -789,12 +751,11 @@ lines(c(observed_months, predicted_months), forecast_GBM.cinema_admissions,
       lty=4, lwd = 2, col = 3)
 lines(observed_months, cumsum(inst_fit.GBM.sarmax), lty=4, lwd=2, col=2)
 legend("bottomright", c("GBMe2", "GBMe2 + SARMAX"), col = c(3, 2),
-       lty = c(4, 4), lwd = c(2, 2), merge = TRUE, cex=0.8)
+       lty = c(4, 4), lwd = c(2, 2), merge = TRUE, cex=0.8, bty = "n")
 
 ```
 
 
-!!! TODO: how to do future predictions when there are xreg???
 
 ```{r gbm_sarmax_future}
 # Create future xreg using GBM model predictions
@@ -935,55 +896,42 @@ model_performance[nrow(model_performance) + 1, ] <-
 ### Prophet with ARIMA refinement
 
 ```{r prophet_residuals_arima}
-prres.arima <- auto.arima(prophet_residuals)
-summary(prres.arima)
+prop.arima <- auto.arima(cinema_admissions, xreg = prophet_data$prophet_predict,
+           seasonal = TRUE)
 
-fit.prres.arima<- fitted(prres.arima)
+summary(prop.arima)
+```
 
-res.prres.arima<- residuals(prres.arima)
-tsdisplay(res.prres.arima)
-
-prophet_data$combined_predict <- prophet_data$prophet_predict + fit.prres.arima
+```{r prop_arima_fit}
+fit.prop.arima <- fitted(prop.arima)
+prophet_data$combined_predict <- fit.prop.arima
 ```
 
 
-```{r plot_prophet_residuals_arima}
+```{r plot_prophet_arima}
 plot(ott_cinema_monthly$ds, ott_cinema_monthly$cinema_admissions, type = "o", 
-     pch = 16, cex=0.6, xlab = "Date", ylab = "Cinema Admissions")
+     pch = 16, cex=0.6, xlab = "", ylab = "Cinema Admissions")
 
 lines(ott_cinema_monthly$ds, prophet_data$prophet_predict, col="orange2", lwd=2)
-lines(ott_cinema_monthly$ds, prophet_data$combined_predict, col="purple2", lwd=2)
+lines(ott_cinema_monthly$ds, as.numeric(fit.prop.arima), col="purple2", lwd=2)
 
-legend("topright", c("Prophet","Prophet + SARIMA"),
-       col = c("orange2", "purple2"), lty = c(1,1), lwd = 2)
-```
-
-
-```{r prophet_arima_residuals}
-# Generate residuals
-prophet.arima_residuals <- prophet_data$y - prophet_data$combined_predict
-
-prophet_data$combined_residuals <- prophet.arima_residuals
-
-checkresiduals(prophet.arima_residuals)
+legend("topright", c("Observed", "Prophet","Prophet + SARMAx"),
+       col = c("black","orange2", "purple2"), lwd = c(1, 2, 2), lty = 1, bty = "n", cex=0.85)
 ```
 
 ```{r prophet_arima_metrics}
-model_name <- "Prophet + ARIMA"
-aic <- NA
+model_name <- "Prophet + SARMAx"
+aic <- sprintf("%.3f", AIC(prop.arima))
 dw <- NA
-lj_box <- sprintf("%.3f", checkresiduals(prophet_data$combined_residuals)$p.value)
+lj_box <- sprintf("%.3f", checkresiduals(prop.arima)$p.value)
 r2 <- sprintf("%.3f", R2_Score(prophet_data$combined_predict, prophet_data$y))
-mae <- format(mean(abs(prophet_data$combined_residuals)), big.mark = ",", 
-              nsmall = 2, scientific = FALSE)
-rmse <- format(sqrt(mean((prophet_data$combined_residuals)^2)), big.mark = ",", 
-               nsmall = 2, scientific = FALSE)
+acc <- as.data.frame.array(forecast::accuracy(prop.arima))
+mae <- format(acc$MAE, big.mark = ",", nsmall = 2, scientific = FALSE)
+rmse <- format(acc$RMSE, big.mark = ",", nsmall = 2, scientific = FALSE)
 
 model_performance[nrow(model_performance) + 1, ] <- 
   c(model_name, aic, dw, lj_box, r2, mae, rmse)
 ```
-
-
 
 
 ## Exponential Smoothing
@@ -1000,7 +948,6 @@ autoplot(hw.cinema_admissions)+
   autolayer(fitted(hw.cinema_admissions), series="Holt-Winters' additive")+
   ylab("Cinema Admissions")+xlab("Year")
 
-checkresiduals(hw.cinema_admissions)
 ```
 
 
@@ -1018,9 +965,10 @@ model_performance[nrow(model_performance) + 1, ] <-
   c(model_name, aic, dw, lj_box, r2, mae, rmse)
 ```
 
+\newpage
 
 ```{r total_model_performances}
-model_performance
+kable(as.data.frame(model_performance))
 ```
 
 
@@ -1030,78 +978,34 @@ model_performance
 
 ```{r prophet_forecast}
 # Create 12-month future dataframe
-future <- make_future_dataframe(prophet_model, periods = 12*3, freq = "month", include_history = TRUE)
+future <- make_future_dataframe(prophet_model, periods = forecast_horizon, freq = "month", include_history = FALSE)
 prophet_forecast <- predict(prophet_model, future)
 ```
 
 
 ```{r ppres_arima_forecast}
 # Forecast residuals using ARIMA
-prres.arima_forecast <- forecast(prres.arima, h = 12*3)
+prop.arima_forecast <- forecast(prop.arima, h = forecast_horizon, xreg = prophet_forecast$yhat)
 ```
 
 
-```{r prop_ari_forecast}
-# Final combined forecast
-final_forecast <- tail(prophet_forecast$yhat, 12*3) + as.numeric(prres.arima_forecast$mean)
-forecast_dates <- tail(future$ds, 12*3)
-```
-
-
-```{r prophet_arima_CI}
-# Prophet forecast intervals (80% CI by default)
-prophet_upper <- tail(prophet_forecast$yhat_upper, 12*3)
-prophet_lower <- tail(prophet_forecast$yhat_lower, 12*3)
-
-# ARIMA forecast intervals (95% CI)
-arima_upper <- prres.arima_forecast$upper[,2]
-arima_lower <- prres.arima_forecast$lower[,2]
-
-# Combined intervals
-combined_upper <- prophet_upper + arima_upper
-combined_lower <- prophet_lower + arima_lower
-
-```
-
-
-```{r prophet_arima_forecast_plot}
-# Combine historical and forecast dates
-full_dates <- c(ott_cinema_monthly$ds, forecast_dates)
-y_range <- range(c(ott_cinema_monthly$cinema_admissions, final_forecast, 
-                   combined_upper, combined_lower), na.rm = TRUE)
-
-# First: Historical plot + fitted values
-plot(ott_cinema_monthly$ds, ott_cinema_monthly$cinema_admissions, type = "o", 
-     pch = 16, cex = 0.6,
-     xlab = "Date", ylab = "Cinema Admissions", 
-     main = "Cinema Admissions with Prophet + ARIMA Forecast",
-     xlim = range(full_dates),
-     ylim = y_range)
-
-# Add fitted lines
-lines(ott_cinema_monthly$ds, prophet_data$prophet_predict, col = "orange2", lwd = 2)
-lines(ott_cinema_monthly$ds, prophet_data$combined_predict, col = "purple2", lwd = 2)
-
-# Add confidence interval (shaded band)
-polygon(c(as.Date(forecast_dates), rev(as.Date(forecast_dates))),
-        c(combined_upper, rev(combined_lower)),
-        col = rgb(0, 0, 1, 0.2), border = NA)  
-
-# Add forecast line
-lines(as.Date(forecast_dates), final_forecast, col = "blue", lwd = 2, lty = 2)
+```{r prop_arima_forecast}
+plot(prop.arima_forecast, xlab = "", ylab = "Cinema Admissions", 
+     main = "Cinema Admissions with Prophet+SARMAx Forecast")
+lines(fit.prop.arima, col = "purple2", lwd = 2, lty = 2)
 
 # Add legend
 legend("topright", 
-       legend = c("Prophet (Fitted)", "Prophet + ARIMA (Fitted)", "Prophet + ARIMA Forecast"),
-       col = c("orange2", "purple2", "blue"), cex = 0.8,
-       lty = c(1, 1, 2), lwd = c(2, 2, 2), pch = c(NA, NA, NA), pt.cex = 0.5, bty = "n")
-
+       legend = c("Observed", "Prophet+SARMAx Fitted", "Prophet+SARMAx Forecast"),
+       col = c("black", "purple2", "skyblue3"), cex = 0.8,
+       lty = c(1, 2, 1), lwd = c(2, 2, 2), pch = c(NA, NA, NA), pt.cex = 0.5, bty = "n")
 ```
 
-## Forecast with SARIMAx
+
+## Forecast with ARIMAx
 
 ```{r xreg_future}
-horizon <- 12*3
+horizon <- 12*5
 # Forecast each regressor 
 
 f_screening <- forecast(Arima(cinema_screening, order=c(2,1,5), seasonal=c(0,1,1)), h = horizon)
@@ -1118,9 +1022,6 @@ xreg1_future <- cbind(
 )
 ```
 
-General indication (for differenced data): 
-- If the ACF is exponentially decaying or sinusoidal and there is a significant spike at lag p in PACF and nothing else, it may be an ARIMA(p,d,0). 
-- If the PACF is exponentially decaying or sinusoidal and there is a significant spike at lag q in ACF and nothing else, it may be an ARIMA(0,d,q). 
 
 ```{r xreg_future_tsdisplay}
 tsdisplay(residuals(f_screening))
@@ -1149,7 +1050,7 @@ y_range <- range(c(cinema_admissions, sarimax_mean, sarimax_upper, sarimax_lower
 
 # Base plot with actual data and fitted values
 plot(ott_cinema_monthly$ds, ott_cinema_monthly$cinema_admissions, type = "o", pch = 16, cex = 0.6,
-     xlab = "Date", ylab = "Cinema Admissions",
+     xlab = "", ylab = "Cinema Admissions",
      main = "ARIMAx Fitted and Forecast",
      xlim = range(full_dates),
      ylim = y_range)
@@ -1174,7 +1075,6 @@ legend("topright",
 ```
 
 
-
 # 4) Unbalanced Competition Regime Change Diachronic model (UCRCD)
 
 Perform a competition study between OTT and Cinema
@@ -1189,10 +1089,10 @@ cinema_admissions.norm <- min_max_scale(ott_cinema_annual$cinema_admissions)
 
 ```{r UCRCD_normalized}
 # Plot the normalized time series
-plot(cinema_admissions.norm, type = "o", pch = 16, lty = 3, col = "blue", 
+plot(ott_cinema_annual$Year, cinema_admissions.norm, type = "o", pch = 16, lty = 3, col = "blue", 
      xlab = "Year", ylab = "Normalized Values",
      main = "Normalized OTT Subscriptions and Cinema Admissions", ylim = c(0, 1))
-points(ott_subscriptions.norm, type = "o", pch = 16, lty = 3, col = "red")
+points(ott_cinema_annual$Year, ott_subscriptions.norm, type = "o", pch = 16, lty = 3, col = "red")
 legend("left", legend = c("Cinema Admissions", "OTT Subscriptions"), 
        col = c("blue", "red"), lty = 3, pch = 16, cex=0.7)
 ```
@@ -1201,70 +1101,6 @@ legend("left", legend = c("Cinema Admissions", "OTT Subscriptions"),
 
 
 Estimating initial parameters with Bass Model:
-
-```{r initial_UCRCD_bass}
-# Cinema Admissions
-BM.cinema_admissions<-BM(ott_cinema_annual$cinema_admissions, display = T)
-m.c = BM.cinema_admissions$Estimate[1, 1]     
-p.c = BM.cinema_admissions$Estimate[2, 1]    
-q.c = BM.cinema_admissions$Estimate[3, 1]   
-
-# OTT Subscriptions
-BM.ott_subscriptions<-BM(ott_cinema_annual$ott_subscriptions_M*1e6, display = T)
-m.o = BM.ott_subscriptions$Estimate[1, 1]  
-p.o = BM.ott_subscriptions$Estimate[2, 1]
-q.o = BM.ott_subscriptions$Estimate[3, 1]
-
-```
-
-GBM for cinema admissions:
-```{r GBM_cinema_annual}
-# Cinema Admissions
-# GBM exponential shock
-
-# Define the time period when the COVID-19 shock begins
-covid_start <- 2020 - 2006 + 1
-
-# m,p,q, a(starting point), b(memory of the shock), c(intensity)
-GBM.cinema_admissions<- GBM(ott_cinema_annual$cinema_admissions, shock = "exp", nshock = 1,
-                     prelimestimates = c(m.c, p.c, q.c, covid_start, -0.5, -0.1)) 
-
-summary(GBM.cinema_admissions)
-checkresiduals(GBM.cinema_admissions)
-
-
-m.c = BM.cinema_admissions$Estimate[1, 1]    # Market potential for Cinema
-p.c = BM.cinema_admissions$Estimate[2, 1]    # Innovation coefficient for Cinema
-q.c = BM.cinema_admissions$Estimate[3, 1]    # Imitation coefficient for Cinema
-```
-
-GGM for OTT subscriptions:
-```{r GGM_ott_annual}
-GGM.ott_subscriptions<- GGM(ott_cinema_annual$ott_subscriptions_M*1e6, 
-                            prelimestimates=c(m.o, 0.01, 0.01, p.o, q.o), oos=10)
-summary(GGM.ott_subscriptions)
-checkresiduals(GGM.ott_subscriptions)
-```
-
-
-
-```{r UCRCD}
-###estimate the UCRCD (with delta and gamma)
-UCRCD.adm.subs<- UCRCD(
-  series1 = ott_cinema_annual$cinema_admissions,  # Instantaneous cinema admissions
-  series2 = ott_cinema_annual$ott_subscriptions_M*1e6,  # Instantaneous OTT subscriptions
-  m1 = m.c,                    # Market potential for cinema (GBM result)
-  p1c = p.c,                   # Innovation coefficient for cinema
-  q1c = q.c,                   # Imitation coefficient for cinema
-  m2 = m.o,                    # Market potential for OTT (BM result)
-  p2 = p.o,                   # Innovation coefficient for OTT
-  q2 = q.o                    # Imitation coefficient for OTT
-)
-summary(UCRCD.adm.subs)
-```
-
-!!! TODO: SINCE THERE IS A SCALE DIFFERENCE IN THE DATA, THE PLOT DOESNT EXPLAIN MUCH. CAN I WORK WITH NORMALIZED DATA WHEN MODELING UCRCD? Will it be academically acceptable? Let's try:
-
 
 ```{r initial_UCRCD_bass_norm}
 # Cinema Admissions

@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.4.2)  4 APR 2025 10:59
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.4.2)  8 APR 2025 18:27
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1800,17 +1800,83 @@ LaTeX Font Info:    Font shape `TU/SourceSansPro(0)/b/n' will be
 
 
 [2]
-File: plots/missing_vs_imputed-1.png Graphic file (type bmp)
-<plots/missing_vs_imputed-1.png>
 File: plots/plot_annual_raw-1.png Graphic file (type bmp)
 <plots/plot_annual_raw-1.png>
+File: plots/missing_vs_imputed-1.png Graphic file (type bmp)
+<plots/missing_vs_imputed-1.png>
+
+Underfull \hbox (badness 10000) in paragraph at lines 474--483
+[]\TU/SourceSansPro(0)/m/n/10 The dataset initially lacked
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 monthly data for cinema-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 related features (audience
+ []
+
+
+Underfull \hbox (badness 1092) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 age spending per person) for
+ []
+
+
+Underfull \hbox (badness 1789) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 the year 2013, with only the
+ []
+
+
+Underfull \hbox (badness 1365) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 total annual values available.
+ []
+
+
+Underfull \hbox (badness 1565) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 values were imputed using a
+ []
+
+
+Underfull \hbox (badness 5231) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 ensure consistency with his-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 monthly averages from the
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 adjacent years (2011, 2012,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 calculate proportional distri-
+ []
+
+
+Underfull \hbox (badness 4805) in paragraph at lines 474--483
+\TU/SourceSansPro(0)/m/n/10 butions. These proportions
+ []
+
+
+Underfull \hbox (badness 1924) in paragraph at lines 484--487
+[]\TU/SourceSansPro(0)/m/n/10 Additionally, a small number
+ []
+
+
+Underfull \hbox (badness 1803) in paragraph at lines 484--487
+\TU/SourceSansPro(0)/m/n/10 2021 (likely due to disrupted
+ []
+
 
 
 [3]
-Underfull \hbox (badness 3746) in paragraph at lines 492--494
-\TU/SourceSansPro(0)/m/n/10 ant to examine potential collinearity issues
- []
-
 File: plots/plot_corr_monthly-1.png Graphic file (type bmp)
 <plots/plot_corr_monthly-1.png>
 
@@ -1836,12 +1902,15 @@ Overfull \hbox (6.1355pt too wide) in paragraph at lines 522--536
  []
 
 
-Package wrapfig Warning: Collision between wrapping environments on input line 552.
+Package wrapfig Warning: Collision between wrapping environments on input line 549.
 
 
-Overfull \hbox (19.00179pt too wide) in paragraph at lines 555--565
+Overfull \hbox (19.00179pt too wide) in paragraph at lines 552--562
  [][] 
  []
+
+
+Package wrapfig Warning: Stationary wraptable forced to float on input line 567.
 
 
 Package wrapfig Warning: Stationary wraptable forced to float on input line 569.
@@ -1852,66 +1921,186 @@ Underfull \hbox (badness 2073) in paragraph at lines 573--575
  []
 
 
-Package wrapfig Warning: Collision between wrapping environments on input line 576.
+Underfull \hbox (badness 1297) in paragraph at lines 576--584
+\TU/SourceSansPro(0)/m/n/10 activity closely follows OTT Subscriptions and Spending
+ []
 
 File: plots/compare_ott_trends-1.png Graphic file (type bmp)
 <plots/compare_ott_trends-1.png>
 
-Package wrapfig Warning: Stationary wrapfigure forced to float on input line 584.
-
-
-Underfull \hbox (badness 1297) in paragraph at lines 584--592
-\TU/SourceSansPro(0)/m/n/10 activity closely follows OTT Subscriptions and Spending
+Underfull \hbox (badness 2376) in paragraph at lines 593--596
+[]\TU/SourceSansPro(0)/m/n/10 .5[]Based on the high correlation values and trend alignment,
  []
-
-
-
-[4]
-
-Package wrapfig Warning: Collision between wrapping environments on input line 603.
 
 File: plots/cinema_admissions-1.png Graphic file (type bmp)
 <plots/cinema_admissions-1.png>
 
-Package wrapfig Warning: Stationary wrapfigure forced to float on input line 612.
 
-
-Package wrapfig Warning: Collision between wrapping environments on input line 617.
-
+[4]
 File: plots/seasonplot_admissions-1.png Graphic file (type bmp)
 <plots/seasonplot_admissions-1.png>
-
-Package wrapfig Warning: Stationary wrapfigure forced to float on input line 626.
-
-
-Package wrapfig Warning: Stationary wrapfigure forced to float on input line 627.
+File: plots/stl_decomp-1.png Graphic file (type bmp)
+<plots/stl_decomp-1.png>
 
 
-Package wrapfig Warning: Stationary wrapfigure forced to float on input line 628.
+[5]
+File: plots/stepwise_tslm-1.png Graphic file (type bmp)
+<plots/stepwise_tslm-1.png>
+File: plots/stepwise_regression-1.png Graphic file (type bmp)
+<plots/stepwise_regression-1.png>
+
+Underfull \hbox (badness 1924) in paragraph at lines 737--741
+[][]\TU/SourceSansPro(0)/m/n/10 Seasonality remained a strong component, with peaks in winter
+ []
+
+File: plots/arima1-1.png Graphic file (type bmp)
+<plots/arima1-1.png>
 
 
-Package wrapfig Warning: Stationary wrapfigure forced to float on input line 632.
+[6]
+File: plots/sarimax2_metrics-1.png Graphic file (type bmp)
+<plots/sarimax2_metrics-1.png>
 
-(./Project_Report.bbl
-Underfull \hbox (badness 1888) in paragraph at lines 39--42
+Underfull \hbox (badness 10000) in paragraph at lines 799--804
+[]\TU/SourceSansPro(0)/m/n/10 Several ARIMAx configurations were tested, and \TU/SourceSansPro(0)/b/n/10 AR-
+ []
+
+
+Underfull \hbox (badness 2653) in paragraph at lines 799--804
+\TU/SourceSansPro(0)/m/n/10 recorded \TU/SourceSansPro(0)/b/n/10 the lowest AIC (5632.803) \TU/SourceSansPro(0)/m/n/10 and the highest R² (0.997)
+ []
+
+File: plots/sarimax2-1.png Graphic file (type bmp)
+<plots/sarimax2-1.png>
+File: plots/bm_gbm_predict-1.png Graphic file (type bmp)
+<plots/bm_gbm_predict-1.png>
+
+Underfull \hbox (badness 1163) in paragraph at lines 861--867
+[]\TU/SourceSansPro(0)/m/n/10 These dates reflect key government actions: on 11 March
+ []
+
+
+Underfull \hbox (badness 1852) in paragraph at lines 861--867
+\TU/SourceSansPro(0)/m/n/10 2020, Italy implemented a nationwide lockdown, shutting
+ []
+
+File: plots/gbm_sarmax_plot-1.png Graphic file (type bmp)
+<plots/gbm_sarmax_plot-1.png>
+
+
+[7]
+File: plots/UCRCD_normalized-1.png Graphic file (type bmp)
+<plots/UCRCD_normalized-1.png>
+File: plots/UCRCD_norm-1.png Graphic file (type bmp)
+<plots/UCRCD_norm-1.png>
+
+Package wrapfig Warning: Stationary wrapfigure forced to float on input line 957.
+
+
+Package wrapfig Warning: Stationary wrapfigure forced to float on input line 959.
+
+
+Underfull \hbox (badness 1968) in paragraph at lines 962--967
+[][]\TU/SourceSansPro(0)/m/n/10 These findings point to a \TU/SourceSansPro(0)/b/n/10 one-sided competitive displacement\TU/SourceSansPro(0)/m/n/10 ,
+ []
+
+File: plots/prophet_plot_components-1.png Graphic file (type bmp)
+<plots/prophet_plot_components-1.png>
+
+
+[8]
+File: plots/prophet_residuals-1.png Graphic file (type bmp)
+<plots/prophet_residuals-1.png>
+File: plots/plot_prophet_arima-1.png Graphic file (type bmp)
+<plots/plot_prophet_arima-1.png>
+
+Underfull \hbox (badness 10000) in paragraph at lines 1038--1048
+[]\TU/SourceSansPro(0)/m/n/10 The resulting model, ARIMA(1,0,1)(2,0,0)[12],
+ []
+
+File: plots/prophet_arima_metrics-1.png Graphic file (type bmp)
+<plots/prophet_arima_metrics-1.png>
+
+
+[9]
+File: plots/prop_arima_forecast-1.png Graphic file (type bmp)
+<plots/prop_arima_forecast-1.png>
+
+
+[10]
+Underfull \hbox (badness 1946) in paragraph at lines 1172--1174
+[]\TU/SourceSansPro(0)/m/n/10 Future values were produced by
+ []
+
+
+Underfull \hbox (badness 2626) in paragraph at lines 1175--1182
+[]\TU/SourceSansPro(0)/m/n/10 The forecasted trajectory in [][]Fig-
+ []
+
+
+Underfull \hbox (badness 2065) in paragraph at lines 1175--1182
+\TU/SourceSansPro(0)/m/n/10 ure 21[][][] (shown in blue) suggests
+ []
+
+
+Underfull \hbox (badness 3364) in paragraph at lines 1175--1182
+\TU/SourceSansPro(0)/m/n/10 indicates that the recovery may
+ []
+
+File: plots/plot_forecast_sarimax-1.png Graphic file (type bmp)
+<plots/plot_forecast_sarimax-1.png>
+
+Underfull \hbox (badness 1122) in paragraph at lines 1203--1208
+[][]\TU/SourceSansPro(0)/m/n/10 Despite the model’s strong fit to
+ []
+
+
+Underfull \hbox (badness 7344) in paragraph at lines 1209--1216
+[]\TU/SourceSansPro(0)/m/n/10 The ARIMAx forecast projects a
+ []
+
+
+Underfull \hbox (badness 2042) in paragraph at lines 1209--1216
+[][]\TU/SourceSansPro(0)/m/n/10 Figure 22[][][] in cinema admissions,
+ []
+
+
+Underfull \hbox (badness 5847) in paragraph at lines 1209--1216
+\TU/SourceSansPro(0)/m/n/10 more conservative forecast pro-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1209--1216
+\TU/SourceSansPro(0)/m/n/10 duced by the Prophet+SARMAx
+ []
+
+
+Underfull \hbox (badness 1281) in paragraph at lines 1209--1216
+\TU/SourceSansPro(0)/m/n/10 all declining pattern observed in
+ []
+
+
+
+[11] (./Project_Report.bbl
+Underfull \hbox (badness 1888) in paragraph at lines 45--48
 []\TU/SourceSansPro(0)/m/n/10 Google Trends.  Google search trends.  [][]$[][][][][] [] [] [] [][][][][][] [] [][][][][][] [] [][][] [] [][][][][][] [] [][][][][][][] [] [][][][] [] [][][][] [][] [][] [][] [][] [] [][][][][][] [][] [][] [][]$
  []
 
 )
 
-[5] (./Project_Report.aux)
+[12] (./Project_Report.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 38614 strings out of 475805
- 827812 string characters out of 5772120
- 1509003 words of memory out of 5000000
- 60877 multiletter control sequences out of 15000+600000
+ 38822 strings out of 475805
+ 833481 string characters out of 5772120
+ 1512248 words of memory out of 5000000
+ 61069 multiletter control sequences out of 15000+600000
  564664 words of font info for 125 fonts, out of 8000000 for 9000
  36 hyphenation exceptions out of 8191
- 108i,19n,110p,10937b,769s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 108i,20n,110p,10937b,769s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on Project_Report.pdf (6 pages).
+Output written on Project_Report.pdf (13 pages).

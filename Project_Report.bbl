@@ -1,0 +1,49 @@
+\begin{thebibliography}{8}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[degli Autori~ed Editori()]{SIAE}
+Società~Italiana degli Autori~ed Editori.
+\newblock L'annuario statistico dello spettacolo.
+\newblock \url{https://www.siae.it/it/cosa-facciamo/dati-dello-spettacolo/annuario-statistico-spettacolo/}.
+
+\bibitem[di~Sanità~(ISS)()]{ISS}
+Istituto~Superiore di~Sanità~(ISS).
+\newblock Covid-19 integrated surveillance data in italy.
+\newblock \url{https://www.epicentro.iss.it/en/coronavirus/sars-cov-2-dashboard}.
+
+\bibitem[di~Statistica~(ISTAT)()]{CPI}
+Istituto~Nazionale di~Statistica~(ISTAT).
+\newblock Consumer price index for blue and white-collar worker households.
+\newblock \url{https://esploradati.istat.it/databrowser/}.
+
+\bibitem[(IVF)()]{IVF}
+International Video~Federation (IVF).
+\newblock Market information - italy.
+\newblock \url{https://www.ivf-video.org/market-information}.
+
+\bibitem[Merkaj and Santolini(2022)]{Merkaj}
+Elona Merkaj and Raffaella Santolini.
+\newblock Italian national policies in response to the covid-19 pandemic: The case of the friuli-venezia-giulia and umbria regions.
+\newblock \emph{Health Policy}, 126\penalty0 (4):\penalty0 287--293, 2022.
+\newblock \doi{10.1016/j.healthpol.2022.02.004}.
+
+\bibitem[Statista()]{statista}
+Statista.
+\newblock Ott video - italy.
+\newblock \url{https://www.statista.com/outlook/amo/media/tv-video/ott-video/italy}.
+
+\bibitem[Statista(2023)]{platforms}
+Statista.
+\newblock Number of svod users in italy 2023, by platform.
+\newblock \url{https://www.statista.com/statistics/935181/svod-users-in-italy/}, 2023.
+
+\bibitem[Trends()]{googtrend}
+Google Trends.
+\newblock Google search trends.
+\newblock \url{https://trends.google.com/trends/explore?date=2006-01-01%202023-12-31&geo=IT&q=netflix%20%2B%20amazon%20prime%20video%20%2B%20timvision%20%2B%20disney%20plus}.
+
+\end{thebibliography}

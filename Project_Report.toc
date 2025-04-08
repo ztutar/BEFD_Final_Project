@@ -1,0 +1,39 @@
+\babel@toc {british}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Problem Definition}{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}The Data Sources}{2}{subsection.1.2}%
+\contentsline {section}{\numberline {2}Data Exploration \& Preprocessing}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Dataset Overview}{2}{subsection.2.1}%
+\contentsline {subsubsection}{\numberline {2.1.1}Monthly Dataset}{2}{subsubsection.2.1.1}%
+\contentsline {subsubsection}{\numberline {2.1.2}Annual Dataset}{3}{subsubsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.2}Handling Missing Values}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Collinearity Check}{4}{subsection.2.3}%
+\contentsline {subsubsection}{\numberline {2.3.1}Correlation Analysis for Monthly Data}{4}{subsubsection.2.3.1}%
+\contentsline {subsubsection}{\numberline {2.3.2}Variance Inflation Factor (VIF) Analysis for Monthly Data}{4}{subsubsection.2.3.2}%
+\contentsline {subsubsection}{\numberline {2.3.3}OTT Google Trends as a Proxy for OTT Subscriptions and Spending}{4}{subsubsection.2.3.3}%
+\contentsline {subsection}{\numberline {2.4}Time Series Decomposition}{4}{subsection.2.4}%
+\contentsline {subsubsection}{\numberline {2.4.1}Time Series and Autocorrelation Analysis}{5}{subsubsection.2.4.1}%
+\contentsline {subsubsection}{\numberline {2.4.2}Seasonal Pattern Analysis}{5}{subsubsection.2.4.2}%
+\contentsline {subsubsection}{\numberline {2.4.3}Decomposing the Time Series}{5}{subsubsection.2.4.3}%
+\contentsline {section}{\numberline {3}Time Series Modeling}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Multiple Linear Regression with Time Series}{5}{subsection.3.1}%
+\contentsline {subsubsection}{\numberline {3.1.1}TSLM wih All Predictors}{5}{subsubsection.3.1.1}%
+\contentsline {subsubsection}{\numberline {3.1.2}Stepwise Linear Regression}{6}{subsubsection.3.1.2}%
+\contentsline {subsection}{\numberline {3.2}ARIMA Models}{6}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}ARIMA}{6}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}ARIMAx}{7}{subsubsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.3}Diffusion Models}{7}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Bass Model}{7}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}Generalized Bass Model (GBM)}{7}{subsubsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.3}GBM with SARIMAx Refinement}{8}{subsubsection.3.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.4}Unbalanced Competition Regime Change Diachronic Model (UCRCD)}{8}{subsubsection.3.3.4}%
+\contentsline {subsection}{\numberline {3.4}Prophet Model}{9}{subsection.3.4}%
+\contentsline {subsubsection}{\numberline {3.4.1}Prophet with SARMAx Refinement}{9}{subsubsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.5}Exponential Smoothing}{10}{subsection.3.5}%
+\contentsline {subsubsection}{\numberline {3.5.1}Holt-Winters method}{10}{subsubsection.3.5.1}%
+\contentsline {section}{\numberline {4}Forecasting}{10}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Model Performances}{10}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Forecast with Prophet + SARMAx}{11}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Forecast with ARIMAx}{11}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Conclusion}{11}{section.5}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 
