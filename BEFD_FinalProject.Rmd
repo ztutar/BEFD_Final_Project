@@ -1,5 +1,5 @@
 ---
-title: "Final Project Study"
+title: "BEFD Final Project"
 author: "Zeynep TUTAR"
 output: pdf_document
 ---
@@ -51,13 +51,6 @@ ott_cinema_annual <- read_excel("ott_cinema_dataset.xlsx", sheet = "Annual")
 str(ott_cinema_annual)
 ```
 
-
-```{r format_time}
-#ott_cinema_monthly$Time=as.Date(paste0(ott_cinema_monthly$Time, "-01"), format = "%Y-%m-%d")
-#ott_cinema_annual$Year <- as.Date(paste0(ott_cinema_annual$Year, "-01-01"), format="%Y-%m-%d")
-```
-
-
 ```{r missing_visual}
 # Check for missing values
 ott_cinema_monthly[apply(is.na(ott_cinema_monthly), 1, any), ]  
@@ -67,15 +60,12 @@ ott_cinema_annual[apply(is.na(ott_cinema_annual), 1, any), ]
 vis_miss(ott_cinema_annual)
 ```
 
-
-
 ```{r create_ts}
 ott_cinema_monthly.ts <- ts(ott_cinema_monthly[,-1], start=c(2006,1), 
                             end=c(2023,12), frequency = 12)
 ott_cinema_annual.ts <- ts(ott_cinema_annual[,-1], start=c(2006), 
                            end=c(2023), frequency = 1)
 ```
-
 
 ```{r plot_monthly_raw}
 plot(ott_cinema_monthly.ts, main="Monthly Cinema-OTT Dataset", cex.lab=0.45, 
@@ -177,7 +167,6 @@ for (col in columns_to_impute) {
 par(mfrow = c(1, 1))
 ```
 
-
 ```{r monthly_imputed}
 ott_cinema_monthly.ts <- cinema_imputed
 ott_cinema_monthly <- as.data.frame(cinema_imputed)
@@ -186,7 +175,6 @@ ott_cinema_monthly <- as.data.frame(cinema_imputed)
 plot(ott_cinema_monthly.ts, main="Cinema-OTT Monthly Dataset (After Imputation)",
      cex.lab=0.45, type="o", pch = 16, lty = 3, cex=0.6)
 ```
-
 
 ## Collinearity Check 
 
