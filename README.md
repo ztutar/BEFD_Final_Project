@@ -1,4 +1,4 @@
-# TIME SERIES ANALYSIS & FORECASTING OF CINEMA ADMISSIONS IN ITALY — Business, Economic & Financial Data Final Project
+# Time Series Analysis & Forecasting of Cinema Admissions in Italy
 
 Final project for the course **Business, Economic and Financial Data**.  
 This repository is intended to showcase an end-to-end applied workflow in **R**: data preparation, diagnostics, time-series forecasting, and diffusion/competition modeling using cinema vs OTT-related indicators.
