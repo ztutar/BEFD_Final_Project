@@ -48,6 +48,6 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# ignore "Project Report" and "Project Study" folders
-Project_Report/
-Project_Study/
+# ignore "Project Report" and "Project Study" folders and their contents
+Project\ Report/
+Project\ Study/
